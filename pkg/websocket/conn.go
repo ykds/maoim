@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 )
 
@@ -124,7 +123,6 @@ func (c *Conn) Read() (fin bool, op int, data []byte, err error) {
 	if mask {
 		maskKey := make([]byte, 4)
 		_, err = c.rb.Read(maskKey)
-		fmt.Printf("%v", maskKey)
 		if err != nil {
 			return
 		}

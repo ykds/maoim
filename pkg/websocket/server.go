@@ -63,6 +63,8 @@ func computeAcceptKey(key string) string {
 
 func maskBytes(key []byte, data []byte) {
 	pos := 0
-	data[pos] ^= key[pos&3]
-	pos++
+	for pos < len(data) {
+		data[pos] = data[pos] ^ key[pos%4]
+		pos++
+	}
 }
