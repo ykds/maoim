@@ -18,7 +18,7 @@ func main() {
 }
 
 func client1(wg *sync.WaitGroup) {
-	config, err := websocket.NewConfig("ws://127.0.0.1:8000/", "*")
+	config, err := websocket.NewConfig("ws://pnxi2x.natappfree.cc/", "*")
 	if err != nil {
 		panic(err)
 	}
@@ -30,9 +30,9 @@ func client1(wg *sync.WaitGroup) {
 
 	time.Sleep(2 * time.Second)
 	payload := map[string]interface{}{
-		"From": "A",
-		"To": "B",
+		"Tos": []string{"B"},
 		"Msg": "hello B",
+		"Seq": 1,
 	}
 	data, _ := json.Marshal(payload)
 	err = websocket.Message.Send(ws, data)
@@ -56,7 +56,7 @@ func client1(wg *sync.WaitGroup) {
 }
 
 func client2(wg *sync.WaitGroup) {
-	config, err := websocket.NewConfig("ws://127.0.0.1:8000/", "*")
+	config, err := websocket.NewConfig("ws://pnxi2x.natappfree.cc/", "*")
 	if err != nil {
 		panic(err)
 	}
@@ -76,9 +76,9 @@ func client2(wg *sync.WaitGroup) {
 		fmt.Println("client B receive, " + b)
 
 		payload := map[string]interface{}{
-			"From": "B",
-			"To": "A",
+			"Tos": []string{"A"},
 			"Msg": "hello A",
+			"Seq": 1,
 		}
 		data, _ := json.Marshal(payload)
 		err = websocket.Message.Send(ws, data)

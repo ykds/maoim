@@ -62,7 +62,7 @@ func (c *Conn) writeHeader(msgType int, msgLen int) error {
 	buf := make([]byte, 14)
 
 	buf[0] = 0
-	buf[0] |= _finBit | rsv1Bit | rsv2Bit | rsv3Bit | byte(msgType)
+	buf[0] |= _finBit | byte(msgType)
 
 	buf[1] = 0
 	switch {

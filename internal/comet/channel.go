@@ -3,6 +3,7 @@ package comet
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"maoim/pkg/websocket"
 	"sync"
 )
@@ -43,16 +44,23 @@ func (c *Channel) ReadMessage() (p *Protocal, err error) {
 		// TODO handle pong
 	case websocket.CloseFrame:
 		_ = conn.Close()
-		return
+		return nil, io.EOF
 	}
 	return nil, errors.New("不支持的操作")
 }
 
 func (c *Channel) WriteMessage(p *Protocal) error {
-	return nil
+	data := make(map[string]interface{}, 2)
+	data["From"] = p.From
+	data["Msg"] = p.Msg
+	data["Seq"] = p.Seq
+
+	marshal, _ := json.Marshal(data)
+	return c.Conn.WriteWebsocket(websocket.TextFrame, marshal)
 }
 
 func ParseMessage(payload []byte) (p *Protocal, err error) {
+	p = &Protocal{}
 	err = json.Unmarshal(payload, p)
 	return
 }

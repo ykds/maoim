@@ -3,6 +3,9 @@ package comet
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"log"
 	"maoim/pkg/websocket"
 	"net"
 	"net/http"
@@ -51,6 +54,8 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, userId string) {
 	var err error
 	c := conn.GetConn().(net.Conn)
 
+	fmt.Printf("%s is online.\n", userId)
+
 	ch := NewChannel(conn)
 	ch.IP, ch.Port, err = net.SplitHostPort(c.RemoteAddr().String())
 	if err != nil {
@@ -62,7 +67,27 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, userId string) {
 	_ = s.bucket.PutChannel(ch.Key, ch)
 
 	for {
-		ch.ReadMessage()
+		p, err := ch.ReadMessage()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				fmt.Printf("%s is offline.\n", userId)
+				return
+			}
+			log.Println(err)
+			continue
+		}
+		_ = s.PushMsg(p)
 	}
 }
 
+func (s *Server) PushMsg(p *Protocal) error {
+	for _, key := range p.Tos {
+		channel, err := s.Bucket().GetChannel(key)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		_ = channel.WriteMessage(p)
+	}
+	return nil
+}
