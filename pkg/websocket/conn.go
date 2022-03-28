@@ -22,7 +22,7 @@ const (
 	ContinuationFrame = 0x0
 	TextFrame = 0x1
 	BinaryFrame = 0x2
-	ConnectionFrame = 0x8
+	CloseFrame = 0x8
 	PingFrame = 0x9
 	PongFrame = 0xA
 )
@@ -42,7 +42,11 @@ func newConn(rwc io.ReadWriteCloser, rb *bufio.Reader, wb *bufio.Writer) *Conn {
 	}
 }
 
-func (c *Conn) Write(msgType int, msg []byte) error {
+func (c *Conn) GetConn() io.ReadWriteCloser {
+	return c.rwc
+}
+
+func (c *Conn) WriteWebsocket(msgType int, msg []byte) error {
 	err := c.writeHeader(msgType, len(msg))
 	if err != nil {
 		return err
@@ -83,7 +87,7 @@ func (c *Conn) writeBody(body []byte) error {
 	return err
 }
 
-func (c *Conn) Read() (fin bool, op int, data []byte, err error) {
+func (c *Conn) ReadWebSocket() (fin bool, op int, data []byte, err error) {
 	var (
 		dataLen int64
 	)
