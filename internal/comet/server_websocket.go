@@ -121,6 +121,7 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *User) {
 			log.Println(err)
 			continue
 		}
+		p.FromId = user.ID
 		p.From = user.Username
 		_ = s.PushMsg(p)
 	}

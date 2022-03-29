@@ -51,6 +51,7 @@ func (c *Channel) ReadMessage() (p *Protocal, err error) {
 
 func (c *Channel) WriteMessage(p *Protocal) error {
 	data := make(map[string]interface{}, 2)
+	data["FromId"] = p.FromId
 	data["From"] = p.From
 	data["Msg"] = p.Msg
 	data["Seq"] = p.Seq
