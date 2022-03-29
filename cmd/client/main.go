@@ -1,23 +1,22 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"golang.org/x/net/websocket"
 	"io"
-	"sync"
-	"time"
+	"os"
+	"strings"
 )
 
 func main() {
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-	go client1(wg)
-	go client2(wg)
-	wg.Wait()
-}
+	//wg := &sync.WaitGroup{}
+	//wg.Add(2)
+	//go client1(wg)
+	//go client2(wg)
+	//wg.Wait()
 
-func client1(wg *sync.WaitGroup) {
 	config, err := websocket.NewConfig("ws://127.0.0.1:8000/", "*")
 	if err != nil {
 		panic(err)
@@ -28,64 +27,46 @@ func client1(wg *sync.WaitGroup) {
 		panic(err)
 	}
 
-	time.Sleep(2 * time.Second)
-	payload := map[string]interface{}{
-		"Tos": []string{"8071612869869735209"},
-		"Msg": "hello hxy",
-		"Seq": 1,
-	}
-	data, _ := json.Marshal(payload)
-	err = websocket.Message.Send(ws, data)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("client dyk send success")
-	}
-
-	var b string
-	err = websocket.Message.Receive(ws, &b)
-	if err != nil {
-		if err == io.EOF {
-			wg.Done()
-		}
-		fmt.Println(err)
-	} else {
-		fmt.Println("client dyk receive, " + b)
-	}
-
+	read(ws)
+	go write(ws)
 }
 
-func client2(wg *sync.WaitGroup) {
-	config, err := websocket.NewConfig("ws://127.0.0.1:8000/", "*")
-	if err != nil {
-		panic(err)
-	}
-	config.Header["Cookie"] = []string{"{\"userId\":8071612869869735209}"}
-	ws, err := websocket.DialConfig(config)
-
-	time.Sleep(2 * time.Second)
-
-	var b string
-	err = websocket.Message.Receive(ws, &b)
-	if err != nil {
-		if err == io.EOF {
-			wg.Done()
-		}
-		fmt.Println(err)
-	} else {
-		fmt.Println("client hxy receive, " + b)
+func read(ws *websocket.Conn) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		text, _ := reader.ReadString('\n')
+		strings.Replace(text, "\n", "", -1)
 
 		payload := map[string]interface{}{
-			"Tos": []string{"4639730689396572890"},
-			"Msg": "hello dyk",
+			"Tos": []string{"772737620168600365"},
+			"Msg": text,
 			"Seq": 1,
 		}
 		data, _ := json.Marshal(payload)
-		err = websocket.Message.Send(ws, data)
+		err := websocket.Message.Send(ws, data)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+}
+
+func write(ws *websocket.Conn) {
+	var b string
+	for {
+		err := websocket.Message.Receive(ws, &b)
+		if err != nil {
+			if err == io.EOF {
+				return
+			}
+			fmt.Println(err)
+			continue
+		}
+		msg := map[string]interface{}{}
+		err = json.Unmarshal([]byte(b), &msg)
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			fmt.Println("client hxy send success")
+			fmt.Printf("%s: %s\n", msg["From"], msg["Msg"])
 		}
 	}
 }
