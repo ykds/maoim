@@ -4,78 +4,124 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"io"
 	"log"
 	"maoim/pkg/websocket"
+	"math/rand"
 	"net"
 	"net/http"
+	"strconv"
 )
 
-
-type Message struct {
-	From string
-	To string
-	Msg string
-	MsgType int
+func (s *Server) Register(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+	if username == "" || password == "" {
+		c.JSON(200, gin.H{"code": 400, "message": "username或password为空"})
+		return
+	}
+	u := &User{
+		ID: rand.Int63(),
+		Username: username,
+		Password: password,
+	}
+	err := s.SaveUser(u)
+	if err != nil {
+		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 200, "message": "register success", "data": u.ID})
 }
 
-func (s *Server) WsHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := websocket.Upgrade(w, r)
+func (s *Server) Login(c *gin.Context) {
+	userId := c.PostForm("userId")
+	password := c.PostForm("password")
+	if userId == "" || password == "" {
+		c.JSON(200, gin.H{"code": 400, "message": "userId或password为空"})
+		return
+	}
+
+	user, err := s.LoadUser(userId)
+	if err != nil {
+		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+	if password == user.Password {
+		cookie := map[string]int64{"userId": user.ID}
+		ck, err := json.Marshal(cookie)
+		if err != nil {
+			c.JSON(200, gin.H{"code": 500, "message": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"code": 200, "message": "login success", "data": string(ck)})
+		return
+	}
+	c.JSON(200, gin.H{"code": 401, "message": "密码错误"})
+}
+
+func (s *Server) WsHandler(c *gin.Context) {
+	conn, err := websocket.Upgrade(c.Writer, c.Request)
 	if err != nil {
 		return
 	}
 
-	userId, err := s.auth(r)
+	user, err := s.auth(c.Request)
 	if err != nil {
-		conn.WriteWebsocket(websocket.TextFrame, []byte("缺少cookie"))
-		conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
+		_ = conn.WriteWebsocket(websocket.TextFrame, []byte("缺少cookie"))
+		_ = conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
+		_ = conn.Close()
 		return
 	}
 
-	go s.serveWebsocket(conn, userId)
+	go s.serveWebsocket(conn, user)
 }
 
 
-func (s *Server) auth(r *http.Request) (string, error) {
+func (s *Server) auth(r *http.Request) (*User, error) {
 	cookie := r.Header.Get("Cookie")
 	if cookie == "" {
-		return "", errors.New("no cookie")
+		return nil, errors.New("no cookie")
 	}
-	data := map[string]interface{}{}
+	data := map[string]int64{}
 	err := json.Unmarshal([]byte(cookie), &data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return data["userId"].(string), nil
+
+	return s.LoadUser(strconv.FormatInt(data["userId"], 10))
 }
 
 
-func (s *Server) serveWebsocket(conn *websocket.Conn, userId string) {
+func (s *Server) serveWebsocket(conn *websocket.Conn, user *User) {
+	defer conn.Close()
+
 	var err error
 	c := conn.GetConn().(net.Conn)
 
-	fmt.Printf("%s is online.\n", userId)
+	fmt.Printf("%d is online.\n", user.ID)
 
 	ch := NewChannel(conn)
 	ch.IP, ch.Port, err = net.SplitHostPort(c.RemoteAddr().String())
 	if err != nil {
-		ch.Conn.WriteWebsocket(websocket.TextFrame, []byte("IP Address format error"))
-		conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
+		_ = ch.Conn.WriteWebsocket(websocket.TextFrame, []byte("IP Address format error"))
+		_ = conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
 		return
 	}
-	ch.Key = userId
+	ch.Key = strconv.FormatInt(user.ID, 10)
 	_ = s.bucket.PutChannel(ch.Key, ch)
 
 	for {
 		p, err := ch.ReadMessage()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				fmt.Printf("%s is offline.\n", userId)
+				fmt.Printf("%d is offline.\n", user.ID)
 				return
 			}
 			log.Println(err)
 			continue
 		}
+		p.From = user.Username
 		_ = s.PushMsg(p)
 	}
 }

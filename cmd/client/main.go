@@ -18,11 +18,11 @@ func main() {
 }
 
 func client1(wg *sync.WaitGroup) {
-	config, err := websocket.NewConfig("ws://pnxi2x.natappfree.cc/", "*")
+	config, err := websocket.NewConfig("ws://127.0.0.1:8000/", "*")
 	if err != nil {
 		panic(err)
 	}
-	config.Header["Cookie"] = []string{"{\"userId\":\"A\"}"}
+	config.Header["Cookie"] = []string{"{\"userId\":4639730689396572890}"}
 	ws, err := websocket.DialConfig(config)
 	if err != nil {
 		panic(err)
@@ -30,8 +30,8 @@ func client1(wg *sync.WaitGroup) {
 
 	time.Sleep(2 * time.Second)
 	payload := map[string]interface{}{
-		"Tos": []string{"B"},
-		"Msg": "hello B",
+		"Tos": []string{"8071612869869735209"},
+		"Msg": "hello hxy",
 		"Seq": 1,
 	}
 	data, _ := json.Marshal(payload)
@@ -39,7 +39,7 @@ func client1(wg *sync.WaitGroup) {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println("client A send success")
+		fmt.Println("client dyk send success")
 	}
 
 	var b string
@@ -50,17 +50,17 @@ func client1(wg *sync.WaitGroup) {
 		}
 		fmt.Println(err)
 	} else {
-		fmt.Println("client A receive, " + b)
+		fmt.Println("client dyk receive, " + b)
 	}
 
 }
 
 func client2(wg *sync.WaitGroup) {
-	config, err := websocket.NewConfig("ws://pnxi2x.natappfree.cc/", "*")
+	config, err := websocket.NewConfig("ws://127.0.0.1:8000/", "*")
 	if err != nil {
 		panic(err)
 	}
-	config.Header["Cookie"] = []string{"{\"userId\":\"B\"}"}
+	config.Header["Cookie"] = []string{"{\"userId\":8071612869869735209}"}
 	ws, err := websocket.DialConfig(config)
 
 	time.Sleep(2 * time.Second)
@@ -73,11 +73,11 @@ func client2(wg *sync.WaitGroup) {
 		}
 		fmt.Println(err)
 	} else {
-		fmt.Println("client B receive, " + b)
+		fmt.Println("client hxy receive, " + b)
 
 		payload := map[string]interface{}{
-			"Tos": []string{"A"},
-			"Msg": "hello A",
+			"Tos": []string{"4639730689396572890"},
+			"Msg": "hello dyk",
 			"Seq": 1,
 		}
 		data, _ := json.Marshal(payload)
@@ -85,7 +85,7 @@ func client2(wg *sync.WaitGroup) {
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			fmt.Println("client B send success")
+			fmt.Println("client hxy send success")
 		}
 	}
 }

@@ -6,8 +6,3 @@ type Protocal struct {
 	Msg string
 	Seq int
 }
-
-type Replay struct {
-	Seq int
-	Msg string
-}
