@@ -30,8 +30,8 @@ func (s *Server) SaveUser(u *User) error {
 	return s.rdb.HSet(CACHE_USER_MAP, strconv.FormatInt(u.ID, 10), string(d))
 }
 
-func (s *Server) LoadUser(userId string) (*User, error) {
-	d, err := s.rdb.HGet(CACHE_USER_MAP, userId)
+func (s *Server) LoadUser(username string) (*User, error) {
+	d, err := s.rdb.HGet(CACHE_USER_MAP, username)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"maoim/api/protocal"
 	"maoim/pkg/websocket"
 	"sync"
 )
@@ -12,41 +13,39 @@ type Channel struct {
 	IP string
 	Port string
 	Key string
-
 	Conn *websocket.Conn
 
-	mu sync.RWMutex
+	signals chan *protocal.Proto
 
-	Seq int
+	ProtoRing *Ring
+
+	mu sync.RWMutex
 }
 
 func NewChannel(conn *websocket.Conn) *Channel {
-	return &Channel{Conn: conn, Seq: 0}
+	return &Channel{Conn: conn}
 }
 
-func (c *Channel) incrSeq() {
-	c.Seq++
-}
-
-
-func (c *Channel) ReadMessage() (p *Protocal, err error) {
+func (c *Channel) ReadMessage() (op int, p *Protocal, err error) {
 	conn := c.Conn
 
 	_, op, payload, err := conn.ReadWebSocket()
 	if err != nil {
-		return nil, err
+		return op, nil, err
 	}
 
 	switch op {
 	case websocket.TextFrame, websocket.BinaryFrame:
-		return ParseMessage(payload)
+		p, err := ParseMessage(payload)
+		return op, p, err
 	case websocket.PingFrame:
-		// TODO handle pong
+		err = conn.WriteWebsocket(websocket.PongFrame, payload)
+		return
 	case websocket.CloseFrame:
 		_ = conn.Close()
-		return nil, io.EOF
+		return op, nil, io.EOF
 	}
-	return nil, errors.New("不支持的操作")
+	return op, nil, errors.New("不支持的操作")
 }
 
 func (c *Channel) WriteMessage(p *Protocal) error {

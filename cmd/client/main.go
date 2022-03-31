@@ -17,7 +17,7 @@ func main() {
 	//go client2(wg)
 	//wg.Wait()
 
-	config, err := websocket.NewConfig("ws://127.0.0.1:8000/", "*")
+	config, err := websocket.NewConfig("ws://whg85s.natappfree.cc/", "*")
 	if err != nil {
 		panic(err)
 	}

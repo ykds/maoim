@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package maoim.comet;
+
+option go_package="api/comet;comet";
+
+import "api/protocal/protocal.proto";
+import "google/protobuf/timestamp.proto";
+
+message PushMsgReq {
+  repeated string keys = 1;
+  maoim.protocal.Proto proto = 2;
+}
+
+message PushMsg {
+  string from_key = 1;
+  string from_who = 2;
+  google.protobuf.Timestamp time = 3;
+  maoim.protocal.Proto proto = 4;
+}

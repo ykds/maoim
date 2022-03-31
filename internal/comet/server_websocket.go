@@ -1,6 +1,7 @@
 package comet
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,12 +22,23 @@ func (s *Server) Register(c *gin.Context) {
 		c.JSON(200, gin.H{"code": 400, "message": "username或password为空"})
 		return
 	}
+
+	user, err := s.LoadUser(username)
+	if err != nil {
+		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+	if user.ID != 0 {
+		c.JSON(200, gin.H{"code": 400, "message": "用户名已被占用"})
+		return
+	}
+
 	u := &User{
 		ID: rand.Int63(),
 		Username: username,
 		Password: password,
 	}
-	err := s.SaveUser(u)
+	err = s.SaveUser(u)
 	if err != nil {
 		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
 		return
@@ -35,26 +47,26 @@ func (s *Server) Register(c *gin.Context) {
 }
 
 func (s *Server) Login(c *gin.Context) {
-	userId := c.PostForm("userId")
+	username := c.PostForm("username")
 	password := c.PostForm("password")
-	if userId == "" || password == "" {
+	if username == "" || password == "" {
 		c.JSON(200, gin.H{"code": 400, "message": "userId或password为空"})
 		return
 	}
 
-	user, err := s.LoadUser(userId)
+	user, err := s.LoadUser(username)
 	if err != nil {
 		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
 		return
 	}
 	if password == user.Password {
-		cookie := map[string]int64{"userId": user.ID}
+		cookie := map[string]string{"username": user.Username}
 		ck, err := json.Marshal(cookie)
 		if err != nil {
 			c.JSON(200, gin.H{"code": 500, "message": err.Error()})
 			return
 		}
-		c.JSON(200, gin.H{"code": 200, "message": "login success", "data": string(ck)})
+		c.JSON(200, gin.H{"code": 200, "message": "login success", "data": base64.StdEncoding.EncodeToString(ck)})
 		return
 	}
 	c.JSON(200, gin.H{"code": 401, "message": "密码错误"})
@@ -83,13 +95,16 @@ func (s *Server) auth(r *http.Request) (*User, error) {
 	if cookie == "" {
 		return nil, errors.New("no cookie")
 	}
-	data := map[string]int64{}
-	err := json.Unmarshal([]byte(cookie), &data)
+	decodeString, err := base64.StdEncoding.DecodeString(cookie)
 	if err != nil {
 		return nil, err
 	}
-
-	return s.LoadUser(strconv.FormatInt(data["userId"], 10))
+	data := map[string]string{}
+	err = json.Unmarshal(decodeString, &data)
+	if err != nil {
+		return nil, err
+	}
+	return s.LoadUser(data["username"])
 }
 
 
@@ -112,7 +127,10 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *User) {
 	_ = s.bucket.PutChannel(ch.Key, ch)
 
 	for {
-		p, err := ch.ReadMessage()
+		op, p, err := ch.ReadMessage()
+		if op == websocket.PingFrame {
+			continue
+		}
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				fmt.Printf("%d is offline.\n", user.ID)
