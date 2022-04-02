@@ -12,9 +12,15 @@ message PushMsgReq {
   maoim.protocal.Proto proto = 2;
 }
 
+message PushMsgReply{}
+
 message PushMsg {
   string from_key = 1;
   string from_who = 2;
   google.protobuf.Timestamp time = 3;
   maoim.protocal.Proto proto = 4;
+}
+
+service Comet {
+  rpc PushMsg (PushMsgReq) returns (PushMsgReply) {};
 }

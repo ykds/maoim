@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -44,6 +45,43 @@ func newConn(rwc io.ReadWriteCloser, rb *bufio.Reader, wb *bufio.Writer) *Conn {
 
 func (c *Conn) GetConn() io.ReadWriteCloser {
 	return c.rwc
+}
+
+func (c *Conn) ReadWebSocket() (payload []byte, err error) {
+	var (
+		fin bool
+		partialPayload []byte
+		finOp, op int
+	)
+
+	for {
+		fin, op, partialPayload, err = c.readFrame()
+		if err != nil {
+			return
+		}
+
+		switch op {
+		case BinaryFrame, TextFrame, ContinuationFrame:
+			payload = append(payload, partialPayload...)
+			if op != ContinuationFrame {
+				finOp = op
+			}
+			if fin {
+				op = finOp
+				return
+			}
+		case PingFrame:
+			err = c.WriteWebsocket(PongFrame, partialPayload)
+			return
+		case CloseFrame:
+			err = c.WriteWebsocket(CloseFrame, partialPayload)
+			c.Close()
+			return
+		default:
+			err = fmt.Errorf("unknown control message, fin=%t, op=%d", fin, op)
+		}
+		return
+	}
 }
 
 func (c *Conn) WriteWebsocket(msgType int, msg []byte) error {
@@ -87,7 +125,7 @@ func (c *Conn) writeBody(body []byte) error {
 	return err
 }
 
-func (c *Conn) ReadWebSocket() (fin bool, op int, data []byte, err error) {
+func (c *Conn) readFrame() (fin bool, op int, data []byte, err error) {
 	var (
 		dataLen int64
 	)

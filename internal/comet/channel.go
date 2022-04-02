@@ -3,7 +3,6 @@ package comet
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"maoim/api/protocal"
 	"maoim/pkg/websocket"
 	"sync"
@@ -15,7 +14,7 @@ type Channel struct {
 	Key string
 	Conn *websocket.Conn
 
-	signals chan *protocal.Proto
+	signal chan *protocal.Proto
 
 	ProtoRing *Ring
 
@@ -23,44 +22,39 @@ type Channel struct {
 }
 
 func NewChannel(conn *websocket.Conn) *Channel {
-	return &Channel{Conn: conn}
+	return &Channel{
+		Conn: conn,
+		signal: make(chan *protocal.Proto, 10),
+		ProtoRing: New(5),
+	}
 }
 
-func (c *Channel) ReadMessage() (op int, p *Protocal, err error) {
-	conn := c.Conn
+func (c *Channel) Ready() *protocal.Proto {
+	return <-c.signal
+}
 
-	_, op, payload, err := conn.ReadWebSocket()
+func (c *Channel) Push(p *protocal.Proto) (err error) {
+	select {
+	case c.signal <- p:
+	default:
+		err = errors.New("signal is full")
+	}
+	return
+}
+
+func (c *Channel) ReadMessage(p *protocal.Proto) (err error) {
+	payload, err := c.Conn.ReadWebSocket()
+	return json.Unmarshal(payload, p)
+}
+
+func (c *Channel) WriteMessage(p *protocal.Proto) error {
+	marshal, err := json.Marshal(p)
 	if err != nil {
-		return op, nil, err
+		return err
 	}
-
-	switch op {
-	case websocket.TextFrame, websocket.BinaryFrame:
-		p, err := ParseMessage(payload)
-		return op, p, err
-	case websocket.PingFrame:
-		err = conn.WriteWebsocket(websocket.PongFrame, payload)
-		return
-	case websocket.CloseFrame:
-		_ = conn.Close()
-		return op, nil, io.EOF
-	}
-	return op, nil, errors.New("不支持的操作")
-}
-
-func (c *Channel) WriteMessage(p *Protocal) error {
-	data := make(map[string]interface{}, 2)
-	data["FromId"] = p.FromId
-	data["From"] = p.From
-	data["Msg"] = p.Msg
-	data["Seq"] = p.Seq
-
-	marshal, _ := json.Marshal(data)
 	return c.Conn.WriteWebsocket(websocket.TextFrame, marshal)
 }
 
-func ParseMessage(payload []byte) (p *Protocal, err error) {
-	p = &Protocal{}
-	err = json.Unmarshal(payload, p)
-	return
+func (c *Channel) Close() error {
+	return c.Conn.Close()
 }
