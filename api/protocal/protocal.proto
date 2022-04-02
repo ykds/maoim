@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package maoim.protocal;
 
-option go_package="api/protocal;protocal";
+option go_package="github.com/ykds/maoim/api/protocal;protocal";
 
 message Proto {
   int32 op = 3;
