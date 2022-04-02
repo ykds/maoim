@@ -22,7 +22,7 @@ type server struct {
 func New(s *comet.Server) *grpc.Server {
 	srv := grpc.NewServer()
 	pb.RegisterCometServer(srv, &server{srv: s})
-	lis, err := net.Listen("tcp", "8001")
+	lis, err := net.Listen("tcp", ":8001")
 	if err != nil {
 		panic(err)
 	}

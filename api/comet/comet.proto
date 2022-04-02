@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package maoim.comet;
 
-option go_package="github.com/ykds/maoim/api/comet;comet";
+option go_package="api/comet;comet";
 
-import "github.com/ykds/maoim/api/protocal/protocal.proto";
+import "api/protocal/protocal.proto";
 import "google/protobuf/timestamp.proto";
 
 message PushMsgReq {

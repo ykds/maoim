@@ -40,7 +40,9 @@ func New() *Server {
 func newCometGrpcClient() (pb.CometClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	dial, err := grpc.DialContext(ctx, "8001")
+	dial, err := grpc.DialContext(ctx, "8001", []grpc.DialOption{
+		grpc.WithInsecure(),
+	}...)
 	if err != nil {
 		return nil, err
 	}
