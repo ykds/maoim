@@ -3,6 +3,7 @@ package comet
 import (
 	"encoding/json"
 	"errors"
+	"maoim/api/comet"
 	"maoim/api/protocal"
 	"maoim/pkg/websocket"
 	"sync"
@@ -14,7 +15,7 @@ type Channel struct {
 	Key string
 	Conn *websocket.Conn
 
-	signal chan *protocal.Proto
+	signal chan *comet.PushMsg
 
 	ProtoRing *Ring
 
@@ -24,16 +25,16 @@ type Channel struct {
 func NewChannel(conn *websocket.Conn) *Channel {
 	return &Channel{
 		Conn: conn,
-		signal: make(chan *protocal.Proto, 10),
+		signal: make(chan *comet.PushMsg, 10),
 		ProtoRing: New(5),
 	}
 }
 
-func (c *Channel) Ready() *protocal.Proto {
+func (c *Channel) Ready() *comet.PushMsg {
 	return <-c.signal
 }
 
-func (c *Channel) Push(p *protocal.Proto) (err error) {
+func (c *Channel) Push(p *comet.PushMsg) (err error) {
 	select {
 	case c.signal <- p:
 	default:
@@ -47,7 +48,7 @@ func (c *Channel) ReadMessage(p *protocal.Proto) (err error) {
 	return json.Unmarshal(payload, p)
 }
 
-func (c *Channel) WriteMessage(p *protocal.Proto) error {
+func (c *Channel) WriteMessage(p *comet.PushMsg) error {
 	marshal, err := json.Marshal(p)
 	if err != nil {
 		return err
@@ -56,5 +57,6 @@ func (c *Channel) WriteMessage(p *protocal.Proto) error {
 }
 
 func (c *Channel) Close() error {
+	c.signal <- comet.ProtoFinish
 	return c.Conn.Close()
 }

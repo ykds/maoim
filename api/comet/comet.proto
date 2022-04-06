@@ -9,7 +9,7 @@ import "google/protobuf/timestamp.proto";
 
 message PushMsgReq {
   repeated string keys = 1;
-  maoim.protocal.Proto proto = 2;
+  PushMsg push_msg = 2;
 }
 
 message PushMsgReply{}

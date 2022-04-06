@@ -4,10 +4,13 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	pb "maoim/api/comet"
 	"maoim/api/protocal"
+	"maoim/internal/user"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -40,8 +43,8 @@ func New() *Server {
 func newCometGrpcClient() (pb.CometClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	dial, err := grpc.DialContext(ctx, "8001", []grpc.DialOption{
-		grpc.WithInsecure(),
+	dial, err := grpc.DialContext(ctx, ":8001", []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}...)
 	if err != nil {
 		return nil, err
@@ -70,12 +73,23 @@ func (s *Server) PushMsg(c *gin.Context) {
 		return
 	}
 
+	u, exists := c.Get("user")
+	if !exists {
+		log.Println(arg)
+		c.JSON(401, gin.H{"code": 401, "message": "no auth"})
+		return
+	}
+	us, _ := u.(*user.User)
 	req := &pb.PushMsgReq{
 		Keys: arg.Keys,
-		Proto: &protocal.Proto{
-			Op: arg.Op,
-			Seq: arg.Seq,
-			Body: arg.Body,
+		PushMsg: &pb.PushMsg{
+			FromKey: strconv.FormatInt(us.ID, 10),
+			FromWho: us.Username,
+			Proto: &protocal.Proto{
+				Op: arg.Op,
+				Seq: arg.Seq,
+				Body: arg.Body,
+			},
 		},
 	}
 
@@ -83,7 +97,9 @@ func (s *Server) PushMsg(c *gin.Context) {
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{"code": 500, "message": "Internal Error"})
+		return
 	}
+	c.JSON(200, gin.H{"code": 200, "message": "success"})
 }
 
 func (s *Server) Start() error {
