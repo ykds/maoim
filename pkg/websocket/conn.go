@@ -13,33 +13,33 @@ const (
 	rsv1Bit = 1 << 6
 	rsv2Bit = 1 << 5
 	rsv3Bit = 1 << 4
-	opBit = 0x0f  // 15
+	opBit   = 0x0f // 15
 
 	maskBit = 1 << 7
-	lenBit = 0x7f
+	lenBit  = 0x7f
 )
 
 const (
 	ContinuationFrame = 0x0
-	TextFrame = 0x1
-	BinaryFrame = 0x2
-	CloseFrame = 0x8
-	PingFrame = 0x9
-	PongFrame = 0xA
+	TextFrame         = 0x1
+	BinaryFrame       = 0x2
+	CloseFrame        = 0x8
+	PingFrame         = 0x9
+	PongFrame         = 0xA
 )
 
 type Conn struct {
-	rwc io.ReadWriteCloser
-	rb *bufio.Reader
-	wb *bufio.Writer
+	rwc     io.ReadWriteCloser
+	rb      *bufio.Reader
+	wb      *bufio.Writer
 	maskKey []byte
 }
 
 func newConn(rwc io.ReadWriteCloser, rb *bufio.Reader, wb *bufio.Writer) *Conn {
 	return &Conn{
 		rwc: rwc,
-		rb: rb,
-		wb: wb,
+		rb:  rb,
+		wb:  wb,
 	}
 }
 
@@ -49,9 +49,9 @@ func (c *Conn) GetConn() io.ReadWriteCloser {
 
 func (c *Conn) ReadWebSocket() (payload []byte, err error) {
 	var (
-		fin bool
+		fin            bool
 		partialPayload []byte
-		finOp, op int
+		finOp, op      int
 	)
 
 	for {

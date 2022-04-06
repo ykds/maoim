@@ -48,7 +48,7 @@ func Upgrade(w http.ResponseWriter, r *http.Request) (*Conn, error) {
 	_, _ = rwc.WriteString("Sec-Websocket-Accept: " + computeAcceptKey(wsKey) + "\r\n")
 	_, _ = rwc.WriteString("Sec-Websocket-Version: 13\r\n\r\n")
 
-	if err  = rwc.Flush(); err != nil {
+	if err = rwc.Flush(); err != nil {
 		return nil, err
 	}
 

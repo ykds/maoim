@@ -6,11 +6,11 @@ import (
 )
 
 type Config struct {
-	Host string `json:"host"`
-	Port string `json:"port"`
-	User string `json:"user"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	User     string `json:"user"`
 	Password string `json:"password"`
-	DB int `json:"db"`
+	DB       int    `json:"db"`
 }
 
 func Load(file string) (*Config, error) {

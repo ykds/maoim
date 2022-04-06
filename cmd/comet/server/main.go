@@ -52,12 +52,8 @@ func main() {
 
 	<-done
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	httpServer.Shutdown(ctx)
 	grpcServer.GracefulStop()
 }
-
-
-
-

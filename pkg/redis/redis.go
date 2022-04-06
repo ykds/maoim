@@ -32,4 +32,3 @@ func (r *Redis) HGet(key string, field string) (string, error) {
 func (r *Redis) HDel(key, field string) error {
 	return r.rdb.HDel(context.Background(), key, field).Err()
 }
-

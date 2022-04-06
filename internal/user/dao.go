@@ -43,7 +43,6 @@ func (d *dao) LoadUser(username string) (*User, error) {
 	return u, nil
 }
 
-
 func (d *dao) DeleteUser(userId string) error {
 	return d.rdb.HDel(CACHE_USER_MAP, userId)
 }

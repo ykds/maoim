@@ -5,13 +5,13 @@ import (
 )
 
 type Server struct {
-	rdb *redis.Redis
+	rdb    *redis.Redis
 	bucket *Bucket
 }
 
 func NewServer(rdb *redis.Redis) *Server {
 	return &Server{
-		rdb: rdb,
+		rdb:    rdb,
 		bucket: NewBucket(1024),
 	}
 }

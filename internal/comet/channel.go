@@ -10,9 +10,9 @@ import (
 )
 
 type Channel struct {
-	IP string
+	IP   string
 	Port string
-	Key string
+	Key  string
 	Conn *websocket.Conn
 
 	signal chan *comet.PushMsg
@@ -24,8 +24,8 @@ type Channel struct {
 
 func NewChannel(conn *websocket.Conn) *Channel {
 	return &Channel{
-		Conn: conn,
-		signal: make(chan *comet.PushMsg, 10),
+		Conn:      conn,
+		signal:    make(chan *comet.PushMsg, 10),
 		ProtoRing: New(5),
 	}
 }

@@ -21,7 +21,6 @@ type service struct {
 	dao Dao
 }
 
-
 func NewService(d Dao) Service {
 	return &service{dao: d}
 }
@@ -36,7 +35,7 @@ func (s *service) Register(username, password string) (*User, error) {
 	}
 
 	u = &User{
-		ID: rand.Int63(),
+		ID:       rand.Int63(),
 		Username: username,
 		Password: password,
 	}
@@ -71,7 +70,6 @@ func (s *service) Exists(username string) (bool, error) {
 	user, err := s.dao.LoadUser(username)
 	return user != nil && user.ID != 0, err
 }
-
 
 func (s *service) GetUser(username string) (*User, error) {
 	return s.dao.LoadUser(username)

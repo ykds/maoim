@@ -6,11 +6,11 @@ import (
 )
 
 type Request struct {
-	Method string
+	Method     string
 	RequestURI string
-	Proto string
-	Host string
-	Header http.Header
+	Proto      string
+	Host       string
+	Header     http.Header
 
 	reader *bufio.Reader
 }

@@ -14,7 +14,6 @@ import (
 
 var _ pb.CometServer = &server{}
 
-
 type server struct {
 	pb.UnimplementedCometServer
 
@@ -39,7 +38,7 @@ func New(s *comet.Server) *grpc.Server {
 	return srv
 }
 
-func (s *server) PushMsg(ctx context.Context, req *pb.PushMsgReq) (*pb.PushMsgReply, error)  {
+func (s *server) PushMsg(ctx context.Context, req *pb.PushMsgReq) (*pb.PushMsgReply, error) {
 	if len(req.Keys) == 0 || req.PushMsg == nil {
 		return nil, errors.New("req params is invalid")
 	}
@@ -54,5 +53,3 @@ func (s *server) PushMsg(ctx context.Context, req *pb.PushMsgReq) (*pb.PushMsgRe
 	}
 	return &pb.PushMsgReply{}, nil
 }
-
-

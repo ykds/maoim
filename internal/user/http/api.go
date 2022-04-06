@@ -1,15 +1,16 @@
-package user
+package http
 
 import (
 	"github.com/gin-gonic/gin"
+	"maoim/internal/user"
 )
 
 type Api struct {
-	g *gin.Engine
-	srv Service
+	g   *gin.Engine
+	srv user.Service
 }
 
-func NewApi(srv Service) *Api {
+func NewApi(srv user.Service) *Api {
 	a := &Api{srv: srv}
 	a.InitRouter(a.g)
 	return a

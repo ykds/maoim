@@ -15,8 +15,8 @@ import (
 )
 
 type Server struct {
-	g *gin.Engine
-	srv *http.Server
+	g     *gin.Engine
+	srv   *http.Server
 	comet pb.CometClient
 }
 
@@ -31,8 +31,8 @@ func New() *Server {
 		panic(err)
 	}
 	s := &Server{
-		g: engine,
-		srv: server,
+		g:     engine,
+		srv:   server,
 		comet: cometClient,
 	}
 
@@ -61,9 +61,9 @@ func (s *Server) PushMsg(c *gin.Context) {
 	var (
 		arg struct {
 			Keys []string `json:"keys"`
-			Op int32 `json:"op"`
-			Seq int32 `json:"seq"`
-			Body string `json:"body"`
+			Op   int32    `json:"op"`
+			Seq  int32    `json:"seq"`
+			Body string   `json:"body"`
 		}
 	)
 	err := c.BindJSON(&arg)
@@ -86,8 +86,8 @@ func (s *Server) PushMsg(c *gin.Context) {
 			FromKey: strconv.FormatInt(us.ID, 10),
 			FromWho: us.Username,
 			Proto: &protocal.Proto{
-				Op: arg.Op,
-				Seq: arg.Seq,
+				Op:   arg.Op,
+				Seq:  arg.Seq,
 				Body: arg.Body,
 			},
 		},

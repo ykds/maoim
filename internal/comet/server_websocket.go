@@ -39,8 +39,8 @@ func (s *Server) WsHandler(c *gin.Context) {
 func (s *Server) serveWebsocket(conn *websocket.Conn, user *user.User) {
 	var (
 		err error
-		c = conn.GetConn().(net.Conn)
-		hb = make(chan struct{})
+		c   = conn.GetConn().(net.Conn)
+		hb  = make(chan struct{})
 	)
 
 	fmt.Printf("%d is online.\n", user.ID)
@@ -106,7 +106,7 @@ func (s *Server) distributeMsg(ctx context.Context, ch *Channel) error {
 	}
 }
 
-func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}) error  {
+func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}) error {
 	t := time.NewTicker(HeartBeatInterval)
 	defer t.Stop()
 

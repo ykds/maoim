@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type Bucket struct{
+type Bucket struct {
 	bct map[string]*Channel
 
 	mu sync.RWMutex
