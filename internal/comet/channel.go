@@ -44,7 +44,11 @@ func (c *Channel) Push(p *comet.PushMsg) (err error) {
 }
 
 func (c *Channel) ReadMessage(p *protocal.Proto) (err error) {
-	payload, err := c.Conn.ReadWebSocket()
+	op, payload, err := c.Conn.ReadWebSocket()
+	if op == websocket.PingFrame {
+		p = &protocal.Proto{Op: protocal.OpHeartBeat}
+		return
+	}
 	return json.Unmarshal(payload, p)
 }
 

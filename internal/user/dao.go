@@ -12,6 +12,11 @@ type Dao interface {
 	SaveUser(u *User) error
 	LoadUser(username string) (*User, error)
 	DeleteUser(userId string) error
+
+	AddFriend(username, friendName string) error
+	RemoveFriend(username, friendName string) error
+	GetFriends(username string) ([]string, error)
+	HasFriend(username, friendName string) (bool, error)
 }
 
 type dao struct {
@@ -43,6 +48,23 @@ func (d *dao) LoadUser(username string) (*User, error) {
 	return u, nil
 }
 
-func (d *dao) DeleteUser(userId string) error {
-	return d.rdb.HDel(CACHE_USER_MAP, userId)
+func (d *dao) DeleteUser(username string) error {
+	return d.rdb.HDel(CACHE_USER_MAP, username)
+}
+
+func (d *dao) AddFriend(username, friendName string) error {
+	return d.rdb.SAdd(CACHE_FRIENT_LIST + ":" + username, friendName)
+}
+
+func (d *dao) RemoveFriend(username, friendName string) error {
+	return d.rdb.SRem(CACHE_FRIENT_LIST + ":" + username, friendName)
+}
+
+func (d *dao) GetFriends(username string) ([]string, error) {
+	return d.rdb.SMembers(CACHE_FRIENT_LIST + ":" + username)
+}
+
+
+func (d *dao) HasFriend(username, friendName string) (bool, error) {
+	return d.rdb.SIsMember(CACHE_FRIENT_LIST + ":" + username, friendName)
 }

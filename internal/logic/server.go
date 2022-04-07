@@ -42,7 +42,27 @@ func New() *Server {
 		user: userClient,
 	}
 
-	s.initRouter()
+	s.initRouter(s.g)
+	return s
+}
+
+func NewDebug(g *gin.Engine) *Server {
+	cometClient, err := newCometGrpcClient()
+	if err != nil {
+		panic(err)
+	}
+	userClient, err := newUserGrpcClient()
+	if err != nil {
+		panic(err)
+	}
+
+	s := &Server{
+		g:     g,
+		comet: cometClient,
+		user: userClient,
+	}
+
+	s.initRouter(s.g)
 	return s
 }
 
@@ -94,8 +114,8 @@ func (s *Server) auth() gin.HandlerFunc {
 	}
 }
 
-func (s *Server) initRouter() {
-	group := s.g.Group("/api", s.auth())
+func (s *Server) initRouter(g *gin.Engine) {
+	group := g.Group("/api", s.auth())
 	group.POST("/pushMsg", s.PushMsg)
 }
 

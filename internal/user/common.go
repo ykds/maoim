@@ -2,4 +2,5 @@ package user
 
 const (
 	CACHE_USER_MAP = "CACHE_USER_MAP"
+	CACHE_FRIENT_LIST = "CACHE_FRIENT_LIST"
 )

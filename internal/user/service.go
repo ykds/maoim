@@ -4,7 +4,13 @@ import (
 	"fmt"
 	"maoim/internal/pkg/utils"
 	"math/rand"
+	"strconv"
 )
+
+type UserVo struct {
+	ID string `json:"id"`
+	Username string `json:"username"`
+}
 
 var _ Service = &service{}
 
@@ -15,12 +21,16 @@ type Service interface {
 	Exists(username string) (bool, error)
 	GetUser(username string) (*User, error)
 	Auth(token string) (*User, error)
+
+	AddFriend(username, friendName string) error
+	RemoveFriend(username, friendName string) error
+	GetFriends(username string) ([]*UserVo, error)
+	HasFriend(username, friendName string) (bool, error)
 }
 
 type service struct {
 	dao Dao
 }
-
 
 func NewService(d Dao) Service {
 	return &service{dao: d}
@@ -80,4 +90,66 @@ func (s *service) Auth(token string) (*User, error) {
 		return nil, fmt.Errorf("token错误")
 	}
 	return s.GetUser(username)
+}
+
+func (s *service) AddFriend(username, friendName string) error {
+	user, err := s.GetUser(friendName)
+	if err != nil {
+		return err
+	}
+	if user.ID == 0 {
+		return fmt.Errorf("不存在该用户")
+	}
+
+	ok, err := s.HasFriend(username, friendName)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return fmt.Errorf("已添加该好友")
+	}
+
+	return s.dao.AddFriend(username, friendName)
+}
+
+func (s *service) RemoveFriend(username, friendName string) error {
+	user, err := s.GetUser(friendName)
+	if err != nil {
+		return err
+	}
+	if user.ID == 0 {
+		return fmt.Errorf("不存在该用户")
+	}
+
+	ok, err := s.HasFriend(username, friendName)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("无此好友")
+	}
+
+	return s.dao.RemoveFriend(username, friendName)
+}
+
+func (s *service) GetFriends(username string) (vos []*UserVo, err error) {
+	friends, err := s.dao.GetFriends(username)
+	if err != nil {
+		return
+	}
+	for _, f := range friends {
+		user, err := s.GetUser(f)
+		if err != nil {
+			continue
+		}
+		vos = append(vos, &UserVo{
+			ID: strconv.FormatInt(user.ID, 10),
+			Username: user.Username,
+		})
+	}
+	return
+}
+
+func (s *service) HasFriend(username, friendName string) (bool, error) {
+	return s.dao.HasFriend(username, friendName)
 }

@@ -5,7 +5,12 @@ import (
 )
 
 func (a *Api) InitRouter(c *gin.Engine) {
-	group := c.Group("/users")
-	group.POST("/register", a.Register)
-	group.POST("/login", a.Login)
+	base := c.Group("/users")
+	base.POST("/register", a.Register)
+	base.POST("/login", a.Login)
+
+	group := base.Group("/friends", a.auth())
+	group.POST("/add", a.AddFriend)
+	group.POST("/del", a.DeleteFriend)
+	group.GET("/list/", a.GetFriends)
 }

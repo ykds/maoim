@@ -47,11 +47,11 @@ func (c *Conn) GetConn() io.ReadWriteCloser {
 	return c.rwc
 }
 
-func (c *Conn) ReadWebSocket() (payload []byte, err error) {
+func (c *Conn) ReadWebSocket() (op int, payload []byte, err error) {
 	var (
 		fin            bool
 		partialPayload []byte
-		finOp, op      int
+		finOp      int
 	)
 
 	for {

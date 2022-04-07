@@ -32,3 +32,36 @@ func (r *Redis) HGet(key string, field string) (string, error) {
 func (r *Redis) HDel(key, field string) error {
 	return r.rdb.HDel(context.Background(), key, field).Err()
 }
+
+func (r *Redis) Exists(key string) (bool, error) {
+	result, err := r.rdb.Exists(context.Background(), key).Result()
+	return result != 0, err
+}
+
+func (r *Redis) LPush(key string, value ...interface{}) error {
+	return r.rdb.LPush(context.Background(), key, value...).Err()
+}
+
+func (r *Redis) LRem(key string, value interface{}) error {
+	return r.rdb.LRem(context.Background(), key, 0, value).Err()
+}
+
+func (r *Redis) LRange(key string, start, stop int64) ([]string, error) {
+	return r.rdb.LRange(context.Background(), key, start, stop).Result()
+}
+
+func (r *Redis) SAdd(key string, value ...interface{}) error  {
+	return r.rdb.SAdd(context.Background(), key, value...).Err()
+}
+
+func (r *Redis) SRem(key string, value ...interface{}) error {
+	return r.rdb.SRem(context.Background(), key, value...).Err()
+}
+
+func (r *Redis) SMembers(key string) ([]string, error) {
+	return r.rdb.SMembers(context.Background(), key).Result()
+}
+
+func (r *Redis) SIsMember(key string, value interface{}) (bool, error) {
+	return r.rdb.SIsMember(context.Background(), key, value).Result()
+}
