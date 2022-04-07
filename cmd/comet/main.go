@@ -34,8 +34,6 @@ func main() {
 
 	engine := gin.Default()
 	engine.GET("/", s.WsHandler)
-	engine.POST("/register", s.Register)
-	engine.POST("/login", s.Login)
 
 	httpServer := http.Server{
 		Addr:    ":8000",

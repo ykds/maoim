@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package maoim.user;
+
+option go_package="api/user;user";
+
+message GetUserReq {
+  string username = 1;
+}
+
+message GetUserReply {
+  string id = 1;
+  string username = 2;
+  string password = 3;
+}
+
+message AuthReq {
+  string token = 1;
+}
+
+message AuthReply {
+  string id = 1;
+  string username = 2;
+  string password = 3;
+}
+
+service User {
+  rpc GetUserByUsername(GetUserReq) returns (GetUserReply) {};
+  rpc Auth(AuthReq) returns (AuthReply) {};
+}

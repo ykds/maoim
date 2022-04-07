@@ -5,9 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"log"
 	pb "maoim/api/comet"
-	"maoim/api/protocal"
+	upb "maoim/api/user"
 	"maoim/internal/user"
 	"net/http"
 	"strconv"
@@ -18,6 +17,7 @@ type Server struct {
 	g     *gin.Engine
 	srv   *http.Server
 	comet pb.CometClient
+	user upb.UserClient
 }
 
 func New() *Server {
@@ -30,10 +30,16 @@ func New() *Server {
 	if err != nil {
 		panic(err)
 	}
+	userClient, err := newUserGrpcClient()
+	if err != nil {
+		panic(err)
+	}
+
 	s := &Server{
 		g:     engine,
 		srv:   server,
 		comet: cometClient,
+		user: userClient,
 	}
 
 	s.initRouter()
@@ -52,55 +58,47 @@ func newCometGrpcClient() (pb.CometClient, error) {
 	return pb.NewCometClient(dial), nil
 }
 
+func newUserGrpcClient() (upb.UserClient, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	dial, err := grpc.DialContext(ctx, ":8003", []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}...)
+	if err != nil {
+		return nil, err
+	}
+	return upb.NewUserClient(dial), nil
+}
+
+func (s *Server) auth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.Request.Header.Get("token")
+		if token == "" {
+			c.Abort()
+			return
+		}
+		reply, err := s.user.Auth(context.Background(), &upb.AuthReq{Token: token})
+		if err != nil {
+			c.Abort()
+			return
+		}
+		userId, err := strconv.ParseInt(reply.Id, 10, 64)
+		u := &user.User{
+			ID: userId,
+			Username: reply.Username,
+			Password: reply.Password,
+		}
+		c.Set("user", u)
+		c.Next()
+	}
+}
+
 func (s *Server) initRouter() {
-	group := s.g.Group("/api")
+	group := s.g.Group("/api", s.auth())
 	group.POST("/pushMsg", s.PushMsg)
 }
 
-func (s *Server) PushMsg(c *gin.Context) {
-	var (
-		arg struct {
-			Keys []string `json:"keys"`
-			Op   int32    `json:"op"`
-			Seq  int32    `json:"seq"`
-			Body string   `json:"body"`
-		}
-	)
-	err := c.BindJSON(&arg)
-	if err != nil {
-		log.Println(arg)
-		c.JSON(400, gin.H{"code": 400, "message": "参数格式错误"})
-		return
-	}
-
-	u, exists := c.Get("user")
-	if !exists {
-		log.Println(arg)
-		c.JSON(401, gin.H{"code": 401, "message": "no auth"})
-		return
-	}
-	us, _ := u.(*user.User)
-	req := &pb.PushMsgReq{
-		Keys: arg.Keys,
-		PushMsg: &pb.PushMsg{
-			FromKey: strconv.FormatInt(us.ID, 10),
-			FromWho: us.Username,
-			Proto: &protocal.Proto{
-				Op:   arg.Op,
-				Seq:  arg.Seq,
-				Body: arg.Body,
-			},
-		},
-	}
-
-	_, err = s.comet.PushMsg(context.Background(), req)
-	if err != nil {
-		log.Println(err)
-		c.JSON(500, gin.H{"code": 500, "message": "Internal Error"})
-		return
-	}
-	c.JSON(200, gin.H{"code": 200, "message": "success"})
-}
 
 func (s *Server) Start() error {
 	return s.srv.ListenAndServe()

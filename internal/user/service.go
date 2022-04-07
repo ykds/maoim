@@ -1,9 +1,8 @@
 package user
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
+	"maoim/internal/pkg/utils"
 	"math/rand"
 )
 
@@ -15,11 +14,13 @@ type Service interface {
 	Logout(userId string) error
 	Exists(username string) (bool, error)
 	GetUser(username string) (*User, error)
+	Auth(token string) (*User, error)
 }
 
 type service struct {
 	dao Dao
 }
+
 
 func NewService(d Dao) Service {
 	return &service{dao: d}
@@ -54,12 +55,7 @@ func (s *service) Login(username, password string) (string, error) {
 	if password != u.Password {
 		return "", fmt.Errorf("密码错误")
 	}
-	cookie := map[string]string{"username": u.Username}
-	ck, err := json.Marshal(cookie)
-	if err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(ck), nil
+	return utils.GenToken(u.ID, u.Username)
 }
 
 func (s *service) Logout(userId string) error {
@@ -73,4 +69,15 @@ func (s *service) Exists(username string) (bool, error) {
 
 func (s *service) GetUser(username string) (*User, error) {
 	return s.dao.LoadUser(username)
+}
+
+func (s *service) Auth(token string) (*User, error) {
+	if token == "" {
+		return nil, fmt.Errorf("token不能为空")
+	}
+	username, err := utils.ValidToken(token)
+	if err != nil {
+		return nil, fmt.Errorf("token错误")
+	}
+	return s.GetUser(username)
 }

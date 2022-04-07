@@ -7,7 +7,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"maoim/api/comet"
 	"maoim/api/protocal"
-	"maoim/internal/pkg/middleware"
+	pb "maoim/api/user"
+	"maoim/internal/pkg/utils"
 	"maoim/internal/user"
 	"maoim/pkg/websocket"
 	"net"
@@ -16,8 +17,31 @@ import (
 )
 
 const (
-	HeartBeatInterval = 100 * time.Minute
+	HeartBeatInterval = 5 * time.Minute
 )
+
+func (s *Server) auth(c *gin.Context) (*user.User, error) {
+	token := c.Request.Header.Get("token")
+	if token == "" {
+		return nil, fmt.Errorf("缺少token")
+	}
+
+	username, err := utils.ValidToken(token)
+	if err != nil {
+		return nil, fmt.Errorf("token错误")
+	}
+	userReply, err := s.userClient.GetUserByUsername(context.Background(), &pb.GetUserReq{Username: username})
+	if err != nil {
+		return nil, fmt.Errorf("token错误")
+	}
+	userId, err := strconv.ParseInt(userReply.Id, 10, 64)
+	u := &user.User{
+		ID: userId,
+		Username: userReply.Username,
+		Password: userReply.Password,
+	}
+	return u, nil
+}
 
 func (s *Server) WsHandler(c *gin.Context) {
 	conn, err := websocket.Upgrade(c.Writer, c.Request)
@@ -25,9 +49,9 @@ func (s *Server) WsHandler(c *gin.Context) {
 		return
 	}
 
-	u, err := middleware.Auth(s.rdb, c.Request)
+	u, err := s.auth(c)
 	if err != nil {
-		_ = conn.WriteWebsocket(websocket.TextFrame, []byte("缺少cookie"))
+		_ = conn.WriteWebsocket(websocket.TextFrame, []byte(err.Error()))
 		_ = conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
 		_ = conn.Close()
 		return
