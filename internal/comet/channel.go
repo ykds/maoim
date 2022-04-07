@@ -47,7 +47,7 @@ func (c *Channel) ReadMessage(p *protocal.Proto) (err error) {
 	op, payload, err := c.Conn.ReadWebSocket()
 	if op == websocket.PingFrame {
 		p = &protocal.Proto{Op: protocal.OpHeartBeat}
-		return
+		return nil
 	}
 	return json.Unmarshal(payload, p)
 }
@@ -58,6 +58,10 @@ func (c *Channel) WriteMessage(p *comet.PushMsg) error {
 		return err
 	}
 	return c.Conn.WriteWebsocket(websocket.TextFrame, marshal)
+}
+
+func (c *Channel) WriteHeartBeat() error {
+	return c.Conn.WriteWebsocket(websocket.PongFrame, []byte(""))
 }
 
 func (c *Channel) Close() error {

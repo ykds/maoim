@@ -95,11 +95,13 @@ func (s *Server) auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Request.Header.Get("token")
 		if token == "" {
+			c.JSON(401, gin.H{"code": 401, "message": "缺少token"})
 			c.Abort()
 			return
 		}
 		reply, err := s.user.Auth(context.Background(), &upb.AuthReq{Token: token})
 		if err != nil {
+			c.JSON(401, gin.H{"code": 401, "message": "token认证失败," + err.Error()})
 			c.Abort()
 			return
 		}

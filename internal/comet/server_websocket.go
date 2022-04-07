@@ -109,7 +109,7 @@ func (s *Server) ReadMessage(ctx context.Context, ch *Channel, hb chan<- struct{
 		}
 		if p.Op == protocal.OpHeartBeat {
 			if now := time.Now(); now.Sub(lastHB) > HeartBeatInterval {
-				// TODO refresh conn timeout
+				_ = ch.Push(comet.ProtoHeartBeatReply)
 				hb <- struct{}{}
 				lastHB = now
 			}
@@ -120,12 +120,19 @@ func (s *Server) ReadMessage(ctx context.Context, ch *Channel, hb chan<- struct{
 func (s *Server) distributeMsg(ctx context.Context, ch *Channel) error {
 	for {
 		p := ch.Ready()
-		if p == comet.ProtoFinish {
+		switch p {
+		case comet.ProtoFinish:
 			return fmt.Errorf("finish")
-		}
-		err := ch.WriteMessage(p)
-		if err != nil {
-			return err
+		case comet.ProtoHeartBeatReply:
+			if err := ch.WriteHeartBeat(); err != nil {
+				return err
+			}
+			continue
+		default:
+			err := ch.WriteMessage(p)
+			if err != nil {
+				return err
+			}
 		}
 	}
 }
