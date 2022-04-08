@@ -64,3 +64,16 @@ func (s *Server) Auth(ctx context.Context, req *pb.AuthReq) (*pb.AuthReply, erro
 		Password: u.Password,
 	}, nil
 }
+
+func (s *Server) IsFriend(ctx context.Context, req *pb.IsFriendReq) (*pb.IsFriendReply, error) {
+	if req.GetFriendname() == "" || req.GetUsername() == ""{
+		return nil, fmt.Errorf("参数错误")
+	}
+	is, err := s.srv.IsFriend(req.GetUsername(), req.GetFriendname())
+	if err != nil {
+		return nil, err
+	}
+	return &pb.IsFriendReply{
+		IsFriend: is,
+	}, nil
+}

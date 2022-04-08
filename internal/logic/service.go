@@ -6,6 +6,7 @@ import (
 	"log"
 	pb "maoim/api/comet"
 	"maoim/api/protocal"
+	upb "maoim/api/user"
 	"maoim/internal/user"
 	"strconv"
 )
@@ -33,6 +34,19 @@ func (s *Server) PushMsg(c *gin.Context) {
 		return
 	}
 	us, _ := u.(*user.User)
+
+	for _, k := range arg.Keys {
+		friendReply, err := s.user.IsFriend(context.Background(), &upb.IsFriendReq{Username: us.Username, Friendname: k})
+		if err != nil {
+			log.Println(err)
+			c.JSON(500, gin.H{"code": 500, "message": "Internal Error"})
+			return
+		}
+		if !friendReply.IsFriend {
+			c.JSON(200, gin.H{"code": 501, "message": k + "不是好友"})
+			return
+		}
+	}
 	req := &pb.PushMsgReq{
 		Keys: arg.Keys,
 		PushMsg: &pb.PushMsg{

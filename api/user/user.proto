@@ -24,7 +24,17 @@ message AuthReply {
   string password = 3;
 }
 
+message IsFriendReq {
+  string username = 1;
+  string friendname = 2;
+}
+
+message IsFriendReply {
+  bool isFriend = 1;
+}
+
 service User {
   rpc GetUserByUsername(GetUserReq) returns (GetUserReply) {};
   rpc Auth(AuthReq) returns (AuthReply) {};
+  rpc IsFriend(IsFriendReq) returns (IsFriendReply) {}
 }

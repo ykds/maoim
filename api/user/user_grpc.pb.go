@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type UserClient interface {
 	GetUserByUsername(ctx context.Context, in *GetUserReq, opts ...grpc.CallOption) (*GetUserReply, error)
 	Auth(ctx context.Context, in *AuthReq, opts ...grpc.CallOption) (*AuthReply, error)
+	IsFriend(ctx context.Context, in *IsFriendReq, opts ...grpc.CallOption) (*IsFriendReply, error)
 }
 
 type userClient struct {
@@ -48,12 +49,22 @@ func (c *userClient) Auth(ctx context.Context, in *AuthReq, opts ...grpc.CallOpt
 	return out, nil
 }
 
+func (c *userClient) IsFriend(ctx context.Context, in *IsFriendReq, opts ...grpc.CallOption) (*IsFriendReply, error) {
+	out := new(IsFriendReply)
+	err := c.cc.Invoke(ctx, "/maoim.user.User/IsFriend", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServer is the server API for User service.
 // All implementations must embed UnimplementedUserServer
 // for forward compatibility
 type UserServer interface {
 	GetUserByUsername(context.Context, *GetUserReq) (*GetUserReply, error)
 	Auth(context.Context, *AuthReq) (*AuthReply, error)
+	IsFriend(context.Context, *IsFriendReq) (*IsFriendReply, error)
 	mustEmbedUnimplementedUserServer()
 }
 
@@ -66,6 +77,9 @@ func (UnimplementedUserServer) GetUserByUsername(context.Context, *GetUserReq) (
 }
 func (UnimplementedUserServer) Auth(context.Context, *AuthReq) (*AuthReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Auth not implemented")
+}
+func (UnimplementedUserServer) IsFriend(context.Context, *IsFriendReq) (*IsFriendReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IsFriend not implemented")
 }
 func (UnimplementedUserServer) mustEmbedUnimplementedUserServer() {}
 
@@ -116,6 +130,24 @@ func _User_Auth_Handler(srv interface{}, ctx context.Context, dec func(interface
 	return interceptor(ctx, in, info, handler)
 }
 
+func _User_IsFriend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IsFriendReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).IsFriend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/maoim.user.User/IsFriend",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).IsFriend(ctx, req.(*IsFriendReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // User_ServiceDesc is the grpc.ServiceDesc for User service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -130,6 +162,10 @@ var User_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Auth",
 			Handler:    _User_Auth_Handler,
+		},
+		{
+			MethodName: "IsFriend",
+			Handler:    _User_IsFriend_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

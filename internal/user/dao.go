@@ -16,7 +16,7 @@ type Dao interface {
 	AddFriend(username, friendName string) error
 	RemoveFriend(username, friendName string) error
 	GetFriends(username string) ([]string, error)
-	HasFriend(username, friendName string) (bool, error)
+	IsFriend(username, friendName string) (bool, error)
 }
 
 type dao struct {
@@ -65,6 +65,6 @@ func (d *dao) GetFriends(username string) ([]string, error) {
 }
 
 
-func (d *dao) HasFriend(username, friendName string) (bool, error) {
+func (d *dao) IsFriend(username, friendName string) (bool, error) {
 	return d.rdb.SIsMember(CACHE_FRIENT_LIST + ":" + username, friendName)
 }

@@ -25,7 +25,7 @@ type Service interface {
 	AddFriend(username, friendName string) error
 	RemoveFriend(username, friendName string) error
 	GetFriends(username string) ([]*UserVo, error)
-	HasFriend(username, friendName string) (bool, error)
+	IsFriend(username, friendName string) (bool, error)
 }
 
 type service struct {
@@ -101,7 +101,7 @@ func (s *service) AddFriend(username, friendName string) error {
 		return fmt.Errorf("不存在该用户")
 	}
 
-	ok, err := s.HasFriend(username, friendName)
+	ok, err := s.IsFriend(username, friendName)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,15 @@ func (s *service) AddFriend(username, friendName string) error {
 		return fmt.Errorf("已添加该好友")
 	}
 
-	return s.dao.AddFriend(username, friendName)
+	err1 := s.dao.AddFriend(username, friendName)
+	err2 := s.dao.AddFriend(friendName, username)
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+	return nil
 }
 
 func (s *service) RemoveFriend(username, friendName string) error {
@@ -121,7 +129,7 @@ func (s *service) RemoveFriend(username, friendName string) error {
 		return fmt.Errorf("不存在该用户")
 	}
 
-	ok, err := s.HasFriend(username, friendName)
+	ok, err := s.IsFriend(username, friendName)
 	if err != nil {
 		return err
 	}
@@ -137,6 +145,8 @@ func (s *service) GetFriends(username string) (vos []*UserVo, err error) {
 	if err != nil {
 		return
 	}
+
+	vos = make([]*UserVo, 0)
 	for _, f := range friends {
 		user, err := s.GetUser(f)
 		if err != nil {
@@ -150,6 +160,6 @@ func (s *service) GetFriends(username string) (vos []*UserVo, err error) {
 	return
 }
 
-func (s *service) HasFriend(username, friendName string) (bool, error) {
-	return s.dao.HasFriend(username, friendName)
+func (s *service) IsFriend(username, friendName string) (bool, error) {
+	return s.dao.IsFriend(username, friendName)
 }
