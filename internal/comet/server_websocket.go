@@ -76,9 +76,9 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user.User) {
 		_ = conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
 		return
 	}
-	ch.Key = strconv.FormatInt(user.ID, 10)
-	_ = s.bucket.PutChannel(user.Username, ch)
-	defer s.bucket.DeleteChannel(user.Username)
+	ch.Key = user.Username
+	_ = s.bucket.PutChannel(ch.Key, ch)
+	defer s.bucket.DeleteChannel(ch.Key)
 
 	g, ctx := errgroup.WithContext(context.Background())
 	g.Go(func() error {
@@ -95,7 +95,7 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user.User) {
 		return nil
 	})
 	if err = g.Wait(); err != nil {
-		fmt.Println(ch.Key + "is offline")
+		fmt.Println(ch.Key + " is offline")
 	}
 }
 
