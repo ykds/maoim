@@ -3,7 +3,7 @@ package user
 import (
 	"encoding/json"
 	"maoim/pkg/redis"
-	"strconv"
+	"strings"
 )
 
 var _ Dao = (*dao)(nil)
@@ -32,12 +32,15 @@ func (d *dao) SaveUser(u *User) error {
 	if err != nil {
 		return err
 	}
-	return d.rdb.HSet(CACHE_USER_MAP, strconv.FormatInt(u.ID, 10), string(data))
+	return d.rdb.HSet(CACHE_USER_MAP, u.Username, string(data))
 }
 
 func (d *dao) LoadUser(username string) (*User, error) {
 	data, err := d.rdb.HGet(CACHE_USER_MAP, username)
 	if err != nil {
+		if strings.Contains(err.Error(), "redis: nil") {
+			return &User{}, nil
+		}
 		return nil, err
 	}
 	u := &User{}
