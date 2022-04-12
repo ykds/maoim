@@ -13,4 +13,11 @@ require (
 	google.golang.org/protobuf v1.28.0
 )
 
-require github.com/golang-jwt/jwt v3.2.2+incompatible
+require (
+	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+	gorm.io/driver/mysql v1.3.3
+	gorm.io/gorm v1.23.4
+)

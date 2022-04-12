@@ -6,7 +6,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"google.golang.org/grpc"
-	"maoim/internal/user"
+	user2 "maoim/internal/logic/user"
 	"net"
 	"strconv"
 
@@ -16,11 +16,11 @@ import (
 type Server struct {
 	pb.UnimplementedUserServer
 
-	srv user.Service
+	srv user2.Service
 }
 
 
-func NewUserGrpcServer(srv user.Service) *grpc.Server {
+func NewUserGrpcServer(srv user2.Service) *grpc.Server {
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_recovery.UnaryServerInterceptor())),

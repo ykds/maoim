@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"flag"
-	"maoim/internal/user"
-	"maoim/internal/user/grpc"
+	user2 "maoim/internal/logic/user"
+	"maoim/internal/logic/user/grpc"
 	"maoim/pkg/redis"
 	"os"
 	"os/signal"
@@ -24,9 +24,9 @@ func main() {
 	}
 	r := redis.New(c)
 
-	dao := user.NewDao(r)
-	service := user.NewService(dao)
-	api := user.NewApi(service)
+	dao := user2.NewDao(r)
+	service := user2.NewService(dao)
+	api := user2.NewApi(service)
 	go api.Start()
 	server := grpc.NewUserGrpcServer(service)
 

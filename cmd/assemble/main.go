@@ -7,8 +7,8 @@ import (
 	"maoim/internal/comet"
 	"maoim/internal/comet/grpc"
 	"maoim/internal/logic"
-	"maoim/internal/user"
-	ugrpc "maoim/internal/user/grpc"
+	user2 "maoim/internal/logic/user"
+	ugrpc "maoim/internal/logic/user/grpc"
 	"maoim/pkg/redis"
 	"math/rand"
 	"net/http"
@@ -73,9 +73,9 @@ func initlogic(g *gin.Engine) {
 }
 
 func inituser(r *redis.Redis, done <-chan struct{}, g *gin.Engine)  {
-	dao := user.NewDao(r)
-	service := user.NewService(dao)
-	_ = user.NewApiDebug(service, g)
+	dao := user2.NewDao(r)
+	service := user2.NewService(dao)
+	_ = user2.NewApiDebug(service, g)
 	server := ugrpc.NewUserGrpcServer(service)
 	<-done
 	server.GracefulStop()

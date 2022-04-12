@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	pb "maoim/api/comet"
 	upb "maoim/api/user"
-	"maoim/internal/user"
+	user2 "maoim/internal/logic/user"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,7 +17,6 @@ type Server struct {
 	g     *gin.Engine
 	srv   *http.Server
 	comet pb.CometClient
-	user upb.UserClient
 }
 
 func New() *Server {
@@ -106,7 +105,7 @@ func (s *Server) auth() gin.HandlerFunc {
 			return
 		}
 		userId, err := strconv.ParseInt(reply.Id, 10, 64)
-		u := &user.User{
+		u := &user2.User{
 			ID: userId,
 			Username: reply.Username,
 			Password: reply.Password,

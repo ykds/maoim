@@ -5,11 +5,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pb "maoim/api/user"
+	"maoim/internal/comet/conf"
 	"maoim/pkg/redis"
 	"time"
 )
 
 type Server struct {
+	c *conf.Config
 	rdb    *redis.Redis
 	bucket *Bucket
 	userClient pb.UserClient

@@ -56,11 +56,11 @@ func (d *dao) DeleteUser(username string) error {
 }
 
 func (d *dao) AddFriend(username, friendName string) error {
-	return d.rdb.SAdd(CACHE_FRIENT_LIST + ":" + username, friendName)
+	return d.rdb.SAdd(CACHE_FRIENT_LIST+ ":" + username, friendName)
 }
 
 func (d *dao) RemoveFriend(username, friendName string) error {
-	return d.rdb.SRem(CACHE_FRIENT_LIST + ":" + username, friendName)
+	return d.rdb.SRem(CACHE_FRIENT_LIST+ ":" + username, friendName)
 }
 
 func (d *dao) GetFriends(username string) ([]string, error) {
@@ -69,5 +69,5 @@ func (d *dao) GetFriends(username string) ([]string, error) {
 
 
 func (d *dao) IsFriend(username, friendName string) (bool, error) {
-	return d.rdb.SIsMember(CACHE_FRIENT_LIST + ":" + username, friendName)
+	return d.rdb.SIsMember(CACHE_FRIENT_LIST+ ":" + username, friendName)
 }

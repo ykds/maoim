@@ -17,7 +17,7 @@ type Channel struct {
 
 	signal chan *comet.PushMsg
 
-	ProtoRing *Ring
+	//ProtoRing *Ring
 
 	mu sync.RWMutex
 }
@@ -26,7 +26,7 @@ func NewChannel(conn *websocket.Conn) *Channel {
 	return &Channel{
 		Conn:      conn,
 		signal:    make(chan *comet.PushMsg, 10),
-		ProtoRing: New(5),
+		//ProtoRing: New(5),
 	}
 }
 

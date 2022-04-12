@@ -7,9 +7,9 @@ import (
 )
 
 type Api struct {
-	g   *gin.Engine
+	g    *gin.Engine
 	http *http.Server
-	srv Service
+	srv  Service
 }
 
 func NewApi(srv Service) *Api {

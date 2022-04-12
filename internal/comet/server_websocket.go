@@ -8,8 +8,8 @@ import (
 	"maoim/api/comet"
 	"maoim/api/protocal"
 	pb "maoim/api/user"
+	user2 "maoim/internal/logic/user"
 	"maoim/internal/pkg/utils"
-	"maoim/internal/user"
 	"maoim/pkg/websocket"
 	"net"
 	"strconv"
@@ -20,7 +20,7 @@ const (
 	HeartBeatInterval = 5 * time.Minute
 )
 
-func (s *Server) auth(c *gin.Context) (*user.User, error) {
+func (s *Server) auth(c *gin.Context) (*user2.User, error) {
 	token := c.Request.Header.Get("token")
 	if token == "" {
 		return nil, fmt.Errorf("缺少token")
@@ -35,7 +35,7 @@ func (s *Server) auth(c *gin.Context) (*user.User, error) {
 		return nil, fmt.Errorf("token错误")
 	}
 	userId, err := strconv.ParseInt(userReply.Id, 10, 64)
-	u := &user.User{
+	u := &user2.User{
 		ID: userId,
 		Username: userReply.Username,
 		Password: userReply.Password,
@@ -60,7 +60,7 @@ func (s *Server) WsHandler(c *gin.Context) {
 	go s.serveWebsocket(conn, u)
 }
 
-func (s *Server) serveWebsocket(conn *websocket.Conn, user *user.User) {
+func (s *Server) serveWebsocket(conn *websocket.Conn, user *user2.User) {
 	var (
 		err error
 		c   = conn.GetConn().(net.Conn)
