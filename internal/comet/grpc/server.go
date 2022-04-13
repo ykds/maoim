@@ -26,7 +26,7 @@ func New(s *comet.Server) *grpc.Server {
 			grpc_recovery.UnaryServerInterceptor(),
 		)))
 	pb.RegisterCometServer(srv, &server{srv: s})
-	lis, err := net.Listen("tcp", ":8001")
+	lis, err := net.Listen("tcp", ":9000")
 	if err != nil {
 		panic(err)
 	}

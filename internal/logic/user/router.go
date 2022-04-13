@@ -9,7 +9,7 @@ func (a *Api) InitRouter(c *gin.Engine) {
 	base.POST("/register", a.Register)
 	base.POST("/login", a.Login)
 
-	group := base.Group("/friends", a.auth())
+	group := base.Group("/friends", Auth(a.srv))
 	group.POST("/add", a.AddFriend)
 	group.POST("/del", a.DeleteFriend)
 	group.GET("/list", a.GetFriends)

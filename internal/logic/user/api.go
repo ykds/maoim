@@ -1,71 +1,32 @@
 package user
 
 import (
-	"context"
 	"github.com/gin-gonic/gin"
-	"net/http"
+	"google.golang.org/grpc"
+	grpc2 "maoim/internal/logic/user/grpc"
 )
 
 type Api struct {
-	g    *gin.Engine
-	http *http.Server
 	srv  Service
+	grpc *grpc.Server
 }
 
-func NewApi(srv Service) *Api {
-	g := gin.Default()
-	httpServer := &http.Server{
-		Addr: ":8004",
-		Handler: g,
-	}
+func NewApi(srv Service, g *gin.Engine) *Api {
 	a := &Api{
 		srv: srv,
-		g: g,
-		http: httpServer,
+		grpc: grpc2.NewUserGrpcServer(srv),
 	}
-	a.InitRouter(a.g)
+	a.InitRouter(g)
 	return a
 }
 
 func NewApiDebug(srv Service, g *gin.Engine) *Api {
 	a := &Api{
 		srv: srv,
-		g: g,
+		grpc: grpc2.NewUserGrpcServer(srv),
 	}
-	a.InitRouter(a.g)
+	a.InitRouter(g)
 	return a
-}
-
-func (a *Api) Start() {
-	err := a.http.ListenAndServe()
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (a *Api) Shutdown(ctx context.Context) error {
-	return a.http.Shutdown(ctx)
-}
-
-func (a *Api) auth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token := c.Request.Header.Get("token")
-		if token == "" {
-			c.JSON(401, gin.H{"code": 401, "message": "缺少token"})
-			c.Abort()
-			return
-		}
-
-		u, err := a.srv.Auth(token)
-		if err != nil {
-			c.JSON(401, gin.H{"code": 401, "message": "token认证失败," + err.Error()})
-			c.Abort()
-			return
-		}
-
-		c.Set("user", u)
-		c.Next()
-	}
 }
 
 func (a *Api) Register(c *gin.Context) {
@@ -180,4 +141,8 @@ func (a *Api) GetFriends(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"code": 200, "message": "success", "data": friends})
+}
+
+func (a *Api) GetUserService() Service {
+	return a.srv
 }

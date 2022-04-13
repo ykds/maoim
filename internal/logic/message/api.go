@@ -3,11 +3,19 @@ package message
 import (
 	"github.com/gin-gonic/gin"
 	"log"
-	user2 "maoim/internal/logic/user"
+	"maoim/internal/logic/user"
 )
 
 type Api struct {
 	srv Service
+}
+
+func NewApi(srv Service, g *gin.Engine) *Api {
+	a := &Api{
+		srv: srv,
+	}
+	a.InitRouter(g)
+	return a
 }
 
 func (a *Api) PushMsg(c *gin.Context)  {
@@ -32,7 +40,7 @@ func (a *Api) PushMsg(c *gin.Context)  {
 		c.JSON(401, gin.H{"code": 401, "message": "no auth"})
 		return
 	}
-	us, _ := u.(*user2.User)
+	us, _ := u.(*user.User)
 
 	err = a.srv.PushMsg(&PushMsgBo{
 		Keys: arg.Keys,

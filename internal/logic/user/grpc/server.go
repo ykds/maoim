@@ -26,7 +26,7 @@ func NewUserGrpcServer(srv user2.Service) *grpc.Server {
 			grpc_recovery.UnaryServerInterceptor())),
 		)
 	pb.RegisterUserServer(server, &Server{srv: srv})
-	lis, err := net.Listen("tcp", ":8003")
+	lis, err := net.Listen("tcp", ":9001")
 	if err != nil {
 		panic(err)
 	}

@@ -19,20 +19,29 @@ type PushMsgBo struct {
 }
 
 type Service interface {
+	GetUserService() user.Service
 	PushMsg(bo *PushMsgBo) error
 }
 
 type service struct {
+	userSrv user.Service
 	d Dao
 }
 
-func NewService(d Dao) Service {
-	return &service{d: d}
+func NewService(d Dao, userSrv user.Service) Service {
+	return &service{
+		d: d,
+		userSrv: userSrv,
+	}
+}
+
+func (s *service) GetUserService() user.Service {
+	return s.userSrv
 }
 
 func (s *service) PushMsg(bo *PushMsgBo) error {
 	for _, k := range bo.Keys {
-		isFriend, err := s.d.IsFriend(context.Background(), bo.u.Username, k)
+		isFriend, err := s.userSrv.IsFriend(bo.u.Username, k)
 		if err != nil {
 			return err
 		}
