@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"github.com/gin-gonic/gin"
+	"log"
 	"maoim/internal/comet"
 	"maoim/internal/comet/grpc"
 	"maoim/internal/logic/wire"
@@ -71,5 +72,9 @@ func initlogic(r *redis.Redis, g *gin.Engine) {
 	if err != nil {
 		panic(err)
 	}
-	wire.Init(r, g, cometClient)
+	server := wire.Init(r, g, cometClient)
+	if err := server.Start(); err != nil {
+		server.Stop()
+		log.Println(err)
+	}
 }

@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (a *Api) InitRouter(c *gin.Engine) {
-	base := c.Group("/users")
+func (a *Api) InitRouter(g *gin.Engine) {
+	base := g.Group("/users")
 	base.POST("/register", a.Register)
 	base.POST("/login", a.Login)
 

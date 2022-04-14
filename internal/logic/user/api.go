@@ -20,15 +20,6 @@ func NewApi(srv Service, g *gin.Engine) *Api {
 	return a
 }
 
-func NewApiDebug(srv Service, g *gin.Engine) *Api {
-	a := &Api{
-		srv: srv,
-		grpc: grpc2.NewUserGrpcServer(srv),
-	}
-	a.InitRouter(g)
-	return a
-}
-
 func (a *Api) Register(c *gin.Context) {
 	var (
 		arg struct {
@@ -145,4 +136,9 @@ func (a *Api) GetFriends(c *gin.Context) {
 
 func (a *Api) GetUserService() Service {
 	return a.srv
+}
+
+func (a *Api) Shutdown() error {
+	a.grpc.GracefulStop()
+	return nil
 }

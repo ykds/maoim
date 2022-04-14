@@ -28,6 +28,7 @@ func main() {
 
 	server := wire.Init(r, gin.Default(), cometClient)
 	if err := server.Start(); err != nil {
+		server.Stop()
 		log.Println(err)
 	}
 }

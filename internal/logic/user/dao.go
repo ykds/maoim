@@ -2,6 +2,7 @@ package user
 
 import (
 	"encoding/json"
+	"maoim/pkg/mysql"
 	"maoim/pkg/redis"
 	"strings"
 )
@@ -21,10 +22,14 @@ type Dao interface {
 
 type dao struct {
 	rdb *redis.Redis
+	db *mysql.Mysql
 }
 
-func NewDao(rdb *redis.Redis) Dao {
-	return &dao{rdb: rdb}
+func NewDao(rdb *redis.Redis, db *mysql.Mysql) Dao {
+	return &dao{
+		rdb: rdb,
+		db: db,
+	}
 }
 
 func (d *dao) SaveUser(u *User) error {
