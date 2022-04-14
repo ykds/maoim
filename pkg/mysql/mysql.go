@@ -19,3 +19,7 @@ func New(conf *Config) *Mysql {
 	}
 	return &Mysql{db: db}
 }
+
+func (m *Mysql) GetDB() *gorm.DB {
+	return m.db
+}
