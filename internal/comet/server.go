@@ -1,8 +1,10 @@
 package comet
 
 import (
+	"maoim/api/message"
 	pb "maoim/api/user"
 	"maoim/internal/comet/conf"
+	mess "maoim/internal/pkg/grpc/message"
 	"maoim/internal/pkg/grpc/user"
 	"maoim/pkg/redis"
 )
@@ -12,6 +14,7 @@ type Server struct {
 	rdb    *redis.Redis
 	bucket *Bucket
 	userClient pb.UserClient
+	messageClient message.MessageClient
 }
 
 func NewServer(rdb *redis.Redis) *Server {
@@ -19,6 +22,7 @@ func NewServer(rdb *redis.Redis) *Server {
 		rdb:    rdb,
 		bucket: NewBucket(1024),
 		userClient: user.NewUserGrpcClient(),
+		messageClient: mess.NewMessageGrpcClient(),
 	}
 }
 

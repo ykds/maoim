@@ -2,17 +2,21 @@ package message
 
 import (
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
 	"log"
+	grpc2 "maoim/internal/logic/message/grpc"
 	"maoim/internal/logic/user"
 )
 
 type Api struct {
 	srv Service
+	grpc *grpc.Server
 }
 
 func NewApi(srv Service, g *gin.Engine) *Api {
 	a := &Api{
 		srv: srv,
+		grpc: grpc2.NewMessageGrpcServer(srv),
 	}
 	a.InitRouter(g)
 	return a

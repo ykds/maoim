@@ -30,15 +30,16 @@ func (s *Server) auth(c *gin.Context) (*user2.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("token错误")
 	}
-	userReply, err := s.userClient.GetUserByUsername(context.Background(), &pb.GetUserReq{Username: username})
+	reply, err := s.userClient.Connect(context.Background(), &pb.ConnectReq{
+		Username: username,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("token错误")
+		return nil, fmt.Errorf("连接异常")
 	}
-	userId, err := strconv.ParseInt(userReply.Id, 10, 64)
+	userId, err := strconv.ParseInt(reply.UserId, 10, 64)
 	u := &user2.User{
 		ID: userId,
-		Username: userReply.Username,
-		Password: userReply.Password,
+		Username: reply.UserName,
 	}
 	return u, nil
 }
@@ -88,7 +89,7 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user2.User) {
 		return s.distributeMsg(ctx, ch)
 	})
 	g.Go(func() error {
-		if err = s.heartbeat(ctx, hb); err != nil {
+		if err = s.heartbeat(ctx, hb, ch.Key); err != nil {
 			ch.Close()
 			return err
 		}
@@ -137,9 +138,12 @@ func (s *Server) distributeMsg(ctx context.Context, ch *Channel) error {
 	}
 }
 
-func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}) error {
+func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}, key string) error {
 	t := time.NewTicker(HeartBeatInterval)
-	defer t.Stop()
+	defer func() {
+		t.Stop()
+		s.userClient.Disconnect(context.Background(), &pb.DisconnectReq{Username: key})
+	}()
 
 	for {
 		select {

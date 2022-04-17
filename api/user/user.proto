@@ -14,27 +14,47 @@ message GetUserReply {
   string password = 3;
 }
 
-message AuthReq {
-  string token = 1;
-}
+//message AuthReq {
+//  string token = 1;
+//}
+//
+//message AuthReply {
+//  string id = 1;
+//  string username = 2;
+//  string password = 3;
+//}
+//
+//message IsFriendReq {
+//  string username = 1;
+//  string friendname = 2;
+//}
+//
+//message IsFriendReply {
+//  bool isFriend = 1;
+//}
 
-message AuthReply {
-  string id = 1;
+message ConnectReq {
+  string user_id = 1;
   string username = 2;
-  string password = 3;
 }
 
-message IsFriendReq {
-  string username = 1;
-  string friendname = 2;
+message ConnectReply {
+  string user_id = 1;
+  string user_name = 2;
 }
 
-message IsFriendReply {
-  bool isFriend = 1;
+message DisconnectReq {
+  string user_id = 1;
+  string username = 2;
 }
+
+message DisconnectReply {}
 
 service User {
+  rpc Connect(ConnectReq) returns (ConnectReply) {}
+  rpc Disconnect(DisconnectReq) returns (DisconnectReply) {}
   rpc GetUserByUsername(GetUserReq) returns (GetUserReply) {};
-  rpc Auth(AuthReq) returns (AuthReply) {};
-  rpc IsFriend(IsFriendReq) returns (IsFriendReply) {}
+//  rpc Auth(AuthReq) returns (AuthReply) {};
+//  rpc IsFriend(IsFriendReq) returns (IsFriendReply) {}
+
 }

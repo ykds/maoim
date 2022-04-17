@@ -7,11 +7,11 @@ import (
 type MessageIndex struct {
 	gorm.Model
 	ID        string `gorm:"primarykey"`
-	SendUserId    string `json:"send_user_id"`
-	ReceiveUserId string `json:"receive_user_id"`
-	Box           int8   `json:"box"`
+	UserId    string `json:"user_id"`
+	OtherSideUserId string `json:"other_side_user_id"`
+	Box           int8   `json:"box" comment:"0:发，1:收"`
 	Read          int8   `json:"read"`
-	MsgId         string `json:"msg_content_id"`
+	MsgId         string `json:"msg_id"`
 }
 
 func (m *MessageIndex) TableName() string {
@@ -28,5 +28,4 @@ type MessageContent struct {
 
 func (mc *MessageContent) TableName() string {
 	return "tbl_message_content"
-
 }

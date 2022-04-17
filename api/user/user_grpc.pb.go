@@ -18,9 +18,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserClient interface {
+	Connect(ctx context.Context, in *ConnectReq, opts ...grpc.CallOption) (*ConnectReply, error)
+	Disconnect(ctx context.Context, in *DisconnectReq, opts ...grpc.CallOption) (*DisconnectReply, error)
 	GetUserByUsername(ctx context.Context, in *GetUserReq, opts ...grpc.CallOption) (*GetUserReply, error)
-	Auth(ctx context.Context, in *AuthReq, opts ...grpc.CallOption) (*AuthReply, error)
-	IsFriend(ctx context.Context, in *IsFriendReq, opts ...grpc.CallOption) (*IsFriendReply, error)
 }
 
 type userClient struct {
@@ -29,6 +29,24 @@ type userClient struct {
 
 func NewUserClient(cc grpc.ClientConnInterface) UserClient {
 	return &userClient{cc}
+}
+
+func (c *userClient) Connect(ctx context.Context, in *ConnectReq, opts ...grpc.CallOption) (*ConnectReply, error) {
+	out := new(ConnectReply)
+	err := c.cc.Invoke(ctx, "/maoim.user.User/Connect", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userClient) Disconnect(ctx context.Context, in *DisconnectReq, opts ...grpc.CallOption) (*DisconnectReply, error) {
+	out := new(DisconnectReply)
+	err := c.cc.Invoke(ctx, "/maoim.user.User/Disconnect", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *userClient) GetUserByUsername(ctx context.Context, in *GetUserReq, opts ...grpc.CallOption) (*GetUserReply, error) {
@@ -40,31 +58,13 @@ func (c *userClient) GetUserByUsername(ctx context.Context, in *GetUserReq, opts
 	return out, nil
 }
 
-func (c *userClient) Auth(ctx context.Context, in *AuthReq, opts ...grpc.CallOption) (*AuthReply, error) {
-	out := new(AuthReply)
-	err := c.cc.Invoke(ctx, "/maoim.user.User/Auth", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *userClient) IsFriend(ctx context.Context, in *IsFriendReq, opts ...grpc.CallOption) (*IsFriendReply, error) {
-	out := new(IsFriendReply)
-	err := c.cc.Invoke(ctx, "/maoim.user.User/IsFriend", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // UserServer is the server API for User service.
 // All implementations must embed UnimplementedUserServer
 // for forward compatibility
 type UserServer interface {
+	Connect(context.Context, *ConnectReq) (*ConnectReply, error)
+	Disconnect(context.Context, *DisconnectReq) (*DisconnectReply, error)
 	GetUserByUsername(context.Context, *GetUserReq) (*GetUserReply, error)
-	Auth(context.Context, *AuthReq) (*AuthReply, error)
-	IsFriend(context.Context, *IsFriendReq) (*IsFriendReply, error)
 	mustEmbedUnimplementedUserServer()
 }
 
@@ -72,14 +72,14 @@ type UserServer interface {
 type UnimplementedUserServer struct {
 }
 
+func (UnimplementedUserServer) Connect(context.Context, *ConnectReq) (*ConnectReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Connect not implemented")
+}
+func (UnimplementedUserServer) Disconnect(context.Context, *DisconnectReq) (*DisconnectReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Disconnect not implemented")
+}
 func (UnimplementedUserServer) GetUserByUsername(context.Context, *GetUserReq) (*GetUserReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserByUsername not implemented")
-}
-func (UnimplementedUserServer) Auth(context.Context, *AuthReq) (*AuthReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Auth not implemented")
-}
-func (UnimplementedUserServer) IsFriend(context.Context, *IsFriendReq) (*IsFriendReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsFriend not implemented")
 }
 func (UnimplementedUserServer) mustEmbedUnimplementedUserServer() {}
 
@@ -92,6 +92,42 @@ type UnsafeUserServer interface {
 
 func RegisterUserServer(s grpc.ServiceRegistrar, srv UserServer) {
 	s.RegisterService(&User_ServiceDesc, srv)
+}
+
+func _User_Connect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConnectReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).Connect(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/maoim.user.User/Connect",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).Connect(ctx, req.(*ConnectReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _User_Disconnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisconnectReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).Disconnect(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/maoim.user.User/Disconnect",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).Disconnect(ctx, req.(*DisconnectReq))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _User_GetUserByUsername_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -112,42 +148,6 @@ func _User_GetUserByUsername_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _User_Auth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AuthReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServer).Auth(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/maoim.user.User/Auth",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServer).Auth(ctx, req.(*AuthReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _User_IsFriend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IsFriendReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServer).IsFriend(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/maoim.user.User/IsFriend",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServer).IsFriend(ctx, req.(*IsFriendReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // User_ServiceDesc is the grpc.ServiceDesc for User service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -156,16 +156,16 @@ var User_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UserServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "Connect",
+			Handler:    _User_Connect_Handler,
+		},
+		{
+			MethodName: "Disconnect",
+			Handler:    _User_Disconnect_Handler,
+		},
+		{
 			MethodName: "GetUserByUsername",
 			Handler:    _User_GetUserByUsername_Handler,
-		},
-		{
-			MethodName: "Auth",
-			Handler:    _User_Auth_Handler,
-		},
-		{
-			MethodName: "IsFriend",
-			Handler:    _User_IsFriend_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

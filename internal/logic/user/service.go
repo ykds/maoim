@@ -26,6 +26,9 @@ type Service interface {
 	RemoveFriend(username, friendName string) error
 	GetFriends(username string) ([]*UserVo, error)
 	IsFriend(username, friendName string) (bool, error)
+
+	Connect(username string) error
+	Disconnect(username string) error
 }
 
 type service struct {
@@ -162,4 +165,13 @@ func (s *service) GetFriends(username string) (vos []*UserVo, err error) {
 
 func (s *service) IsFriend(username, friendName string) (bool, error) {
 	return s.dao.IsFriend(username, friendName)
+}
+
+
+func (s *service) Disconnect(username string) error {
+	return s.dao.SetOffline(username)
+}
+
+func (s *service) Connect(username string) error {
+	return s.dao.SetOnline(username)
 }

@@ -21,11 +21,16 @@ type PushMsgBo struct {
 type Service interface {
 	GetUserService() user.Service
 	PushMsg(bo *PushMsgBo) error
+	AckMsg(userId string, msgId string) error
 }
 
 type service struct {
 	userSrv user.Service
 	d Dao
+}
+
+func (s *service) GetContentIndexByMsgId(msgId string) ([]*MessageIndex, error) {
+	panic("implement me")
 }
 
 func NewService(d Dao, userSrv user.Service) Service {
@@ -64,4 +69,9 @@ func (s *service) PushMsg(bo *PushMsgBo) error {
 	}
 
 	return s.d.PushMsg(context.Background(), req)
+}
+
+
+func (s *service) AckMsg(userId string, msgId string) error {
+	return s.d.AckMsg(userId, msgId)
 }

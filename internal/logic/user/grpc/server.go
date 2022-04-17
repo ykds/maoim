@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -53,27 +54,46 @@ func (s *Server) GetUserByUsername(ctx context.Context, req *pb.GetUserReq) (*pb
 	}, nil
 }
 
-func (s *Server) Auth(ctx context.Context, req *pb.AuthReq) (*pb.AuthReply, error) {
-	u, err := s.srv.Auth(req.Token)
+func (s *Server) Connect(ctx context.Context, req *pb.ConnectReq) (reply *pb.ConnectReply, err error) {
+	if req.GetUsername() == "" {
+		return nil, errors.New("参数错误")
+	}
+
+	err = s.srv.Connect(req.GetUsername())
 	if err != nil {
 		return nil, err
 	}
-	return &pb.AuthReply{
-		Id: strconv.FormatInt(u.ID, 10),
-		Username: u.Username,
-		Password: u.Password,
+	user, err := s.srv.GetUser(req.GetUsername())
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ConnectReply{
+		UserId: strconv.FormatInt(user.ID, 10),
+		UserName: user.Username,
 	}, nil
 }
 
-func (s *Server) IsFriend(ctx context.Context, req *pb.IsFriendReq) (*pb.IsFriendReply, error) {
-	if req.GetFriendname() == "" || req.GetUsername() == ""{
-		return nil, fmt.Errorf("参数错误")
-	}
-	is, err := s.srv.IsFriend(req.GetUsername(), req.GetFriendname())
-	if err != nil {
-		return nil, err
-	}
-	return &pb.IsFriendReply{
-		IsFriend: is,
-	}, nil
-}
+//func (s *Server) Auth(ctx context.Context, req *pb.AuthReq) (*pb.AuthReply, error) {
+//	u, err := s.srv.Auth(req.Token)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return &pb.AuthReply{
+//		Id: strconv.FormatInt(u.ID, 10),
+//		Username: u.Username,
+//		Password: u.Password,
+//	}, nil
+//}
+//
+//func (s *Server) IsFriend(ctx context.Context, req *pb.IsFriendReq) (*pb.IsFriendReply, error) {
+//	if req.GetFriendname() == "" || req.GetUsername() == ""{
+//		return nil, fmt.Errorf("参数错误")
+//	}
+//	is, err := s.srv.IsFriend(req.GetUsername(), req.GetFriendname())
+//	if err != nil {
+//		return nil, err
+//	}
+//	return &pb.IsFriendReply{
+//		IsFriend: is,
+//	}, nil
+//}

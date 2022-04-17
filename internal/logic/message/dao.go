@@ -19,12 +19,14 @@ type SaveMsgDo struct {
 type Dao interface {
 	PushMsg(ctx context.Context, req *cpb.PushMsgReq) error
 	SaveMsg(ctx context.Context, do *SaveMsgDo) error
+	AckMsg(userId, msgId string) error
 }
 
 type dao struct {
 	cometClient cpb.CometClient
 	db *mysql.Mysql
 }
+
 
 func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
 	return d.db.GetDB().Transaction(func(tx *gorm.DB) (err error) {
@@ -46,14 +48,15 @@ func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
 		}
 
 		sMi := MessageIndex{
-			SendUserId: do.SendUserId,
-			ReceiveUserId: do.ReceiveUserId,
+			UserId: do.SendUserId,
+			OtherSideUserId: do.ReceiveUserId,
 			Box: 0,
+			Read: 1,
 			MsgId: mc.ID,
 		}
 		rMi := MessageIndex{
-			SendUserId: do.ReceiveUserId,
-			ReceiveUserId: do.SendUserId,
+			UserId: do.ReceiveUserId,
+			OtherSideUserId: do.SendUserId,
 			Box: 1,
 			MsgId: mc.ID,
 		}
@@ -65,6 +68,11 @@ func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
 func (d *dao) PushMsg(ctx context.Context, req *cpb.PushMsgReq) error {
 	_, err := d.cometClient.PushMsg(ctx, req)
 	return err
+}
+
+
+func (d *dao) AckMsg(userId, msgId string) error {
+	return d.db.GetDB().Where("user_id = ? and msg_id = ?", userId, msgId).Update("read", 1).Error
 }
 
 func NewDao(cometClient cpb.CometClient, db *mysql.Mysql) Dao {
