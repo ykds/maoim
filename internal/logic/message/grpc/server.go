@@ -35,3 +35,4 @@ func NewMessageGrpcServer(srv message.Service) *grpc.Server {
 func (s *Server) AckMsg(ctx context.Context, req *pb.AckReq) (*pb.AckReply, error) {
 	return &pb.AckReply{}, s.srv.AckMsg(req.UserId, req.MsgId)
 }
+

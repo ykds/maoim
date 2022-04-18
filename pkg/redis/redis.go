@@ -21,6 +21,10 @@ func New(c *Config) *Redis {
 	}
 }
 
+func (r *Redis) HExists(key string, field string) (bool, error) {
+	return r.rdb.HExists(context.Background(), key, field).Result()
+}
+
 func (r *Redis) HSet(key string, field string, value interface{}) error {
 	return r.rdb.HSet(context.Background(), key, field, value).Err()
 }

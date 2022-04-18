@@ -39,7 +39,7 @@ func New(s *comet.Server) *grpc.Server {
 }
 
 func (s *server) PushMsg(ctx context.Context, req *pb.PushMsgReq) (*pb.PushMsgReply, error) {
-	if len(req.Keys) == 0 || req.PushMsg == nil {
+	if len(req.Keys) == 0 || req.Proto == nil {
 		return nil, errors.New("req params is invalid")
 	}
 	for _, key := range req.Keys {
@@ -47,7 +47,7 @@ func (s *server) PushMsg(ctx context.Context, req *pb.PushMsgReq) (*pb.PushMsgRe
 		if err != nil {
 			return nil, err
 		}
-		if err := ch.Push(req.PushMsg); err != nil {
+		if err := ch.Push(req.Proto); err != nil {
 			return nil, err
 		}
 	}

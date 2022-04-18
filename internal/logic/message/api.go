@@ -25,7 +25,7 @@ func NewApi(srv Service, g *gin.Engine) *Api {
 func (a *Api) PushMsg(c *gin.Context)  {
 	var (
 		arg struct {
-			Keys []string `json:"keys"`
+			Key string `json:"key"`
 			Op   int32    `json:"op"`
 			Seq  int32    `json:"seq"`
 			Body string   `json:"body"`
@@ -47,7 +47,7 @@ func (a *Api) PushMsg(c *gin.Context)  {
 	us, _ := u.(*user.User)
 
 	err = a.srv.PushMsg(&PushMsgBo{
-		Keys: arg.Keys,
+		Key: arg.Key,
 		Op: arg.Op,
 		Seq: arg.Seq,
 		Body: arg.Body,
@@ -59,4 +59,21 @@ func (a *Api) PushMsg(c *gin.Context)  {
 		return
 	}
 	c.JSON(200, gin.H{"code": 200, "message": "success"})
+}
+
+func (a *Api) PullMsg(c *gin.Context) {
+	u, exists := c.Get("user")
+	if !exists {
+		c.JSON(401, gin.H{"code": 401, "message": "no auth"})
+		return
+	}
+	us, _ := u.(*user.User)
+
+	msg, err := a.srv.PullMsg(us.ID)
+	if err != nil {
+		c.JSON(500, gin.H{"code": 500, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"code": 200, "message": "success", "data": msg})
 }

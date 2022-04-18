@@ -17,10 +17,11 @@ type Dao interface {
 	AddFriend(username, friendName string) error
 	RemoveFriend(username, friendName string) error
 	GetFriends(username string) ([]string, error)
-	IsFriend(username, friendName string) (bool, error)
+	IsFriend(userId, friendId string) (bool, error)
 
 	SetOnline(username string) error
 	SetOffline(username string) error
+	IsOnline(userId string) (bool, error)
 }
 
 type dao struct {
@@ -28,6 +29,9 @@ type dao struct {
 	db *mysql.Mysql
 }
 
+func (d *dao) IsOnline(userId string) (bool, error) {
+	return d.rdb.HExists("ONLINE_MAP", userId)
+}
 
 func NewDao(rdb *redis.Redis, db *mysql.Mysql) Dao {
 	return &dao{
@@ -76,8 +80,8 @@ func (d *dao) GetFriends(username string) ([]string, error) {
 	return d.rdb.SMembers(CACHE_FRIENT_LIST + ":" + username)
 }
 
-func (d *dao) IsFriend(username, friendName string) (bool, error) {
-	return d.rdb.SIsMember(CACHE_FRIENT_LIST+ ":" + username, friendName)
+func (d *dao) IsFriend(userId, friendId string) (bool, error) {
+	return d.rdb.SIsMember(CACHE_FRIENT_LIST+ ":" + userId, friendId)
 }
 
 func (d *dao) SetOnline(username string) error {

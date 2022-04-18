@@ -5,7 +5,8 @@ package maoim.protocal;
 option go_package="api/protocal;protocal";
 
 message Proto {
-  int32 op = 3;
-  int32 seq = 4;
-  string body = 5;
+  int32 ack = 1;
+  int32 op = 2;
+  int32 seq = 3;
+  bytes body = 4;
 }

@@ -7,11 +7,9 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"google.golang.org/grpc"
+	pb "maoim/api/user"
 	user2 "maoim/internal/logic/user"
 	"net"
-	"strconv"
-
-	pb "maoim/api/user"
 )
 
 type Server struct {
@@ -48,7 +46,7 @@ func (s *Server) GetUserByUsername(ctx context.Context, req *pb.GetUserReq) (*pb
 		return nil, err
 	}
 	return &pb.GetUserReply{
-		Id: strconv.FormatInt(u.ID, 10),
+		Id: u.ID,
 		Username: u.Username,
 		Password: u.Password,
 	}, nil
@@ -68,7 +66,7 @@ func (s *Server) Connect(ctx context.Context, req *pb.ConnectReq) (reply *pb.Con
 		return nil, err
 	}
 	return &pb.ConnectReply{
-		UserId: strconv.FormatInt(user.ID, 10),
+		UserId: user.ID,
 		UserName: user.Username,
 	}, nil
 }

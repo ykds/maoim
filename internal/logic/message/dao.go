@@ -16,10 +16,18 @@ type SaveMsgDo struct {
 	ContentType int8
 }
 
+type PullMsgDo struct {
+	SendUserId string
+	MsgId string
+	Content string
+	ContentType int8
+}
+
 type Dao interface {
 	PushMsg(ctx context.Context, req *cpb.PushMsgReq) error
 	SaveMsg(ctx context.Context, do *SaveMsgDo) error
 	AckMsg(userId, msgId string) error
+	ListUnReadMsg(userId string) ([]*PullMsgDo, error)
 }
 
 type dao struct {
@@ -27,6 +35,29 @@ type dao struct {
 	db *mysql.Mysql
 }
 
+func (d *dao) ListUnReadMsg(userId string) ([]*PullMsgDo, error) {
+	mis := make([]MessageIndex, 0)
+	err := d.db.GetDB().Where("user_id = ? and box = 1 and read = 0", userId).Find(&mis).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*PullMsgDo, 0)
+	for _, mi := range mis {
+		mc := MessageContent{}
+		err = d.db.GetDB().Where("id = ?", mi.MsgId).Find(&mc).Error
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, &PullMsgDo{
+			SendUserId: mi.OtherSideUserId,
+			MsgId: mi.MsgId,
+			Content: mc.Content,
+			ContentType: mc.ContentType,
+		})
+	}
+	return result, nil
+}
 
 func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
 	return d.db.GetDB().Transaction(func(tx *gorm.DB) (err error) {

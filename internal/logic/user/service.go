@@ -25,14 +25,20 @@ type Service interface {
 	AddFriend(username, friendName string) error
 	RemoveFriend(username, friendName string) error
 	GetFriends(username string) ([]*UserVo, error)
-	IsFriend(username, friendName string) (bool, error)
+	IsFriend(userId, friendId string) (bool, error)
 
 	Connect(username string) error
 	Disconnect(username string) error
+
+	IsOnline(userId string) (bool, error)
 }
 
 type service struct {
 	dao Dao
+}
+
+func (s *service) IsOnline(userId string) (bool, error) {
+	return s.dao.IsOnline(userId)
 }
 
 func NewService(d Dao) Service {
@@ -44,12 +50,12 @@ func (s *service) Register(username, password string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	if u.ID != 0 {
+	if u.ID != "" {
 		return nil, fmt.Errorf("user has registered")
 	}
 
 	u = &User{
-		ID:       rand.Int63(),
+		ID:       strconv.FormatInt(rand.Int63(), 10),
 		Username: username,
 		Password: password,
 	}
@@ -77,7 +83,7 @@ func (s *service) Logout(userId string) error {
 
 func (s *service) Exists(username string) (bool, error) {
 	user, err := s.dao.LoadUser(username)
-	return user != nil && user.ID != 0, err
+	return user != nil && user.ID != "", err
 }
 
 func (s *service) GetUser(username string) (*User, error) {
@@ -88,7 +94,7 @@ func (s *service) Auth(token string) (*User, error) {
 	if token == "" {
 		return nil, fmt.Errorf("token不能为空")
 	}
-	username, err := utils.ValidToken(token)
+	_, username, err := utils.ValidToken(token)
 	if err != nil {
 		return nil, fmt.Errorf("token错误")
 	}
@@ -100,7 +106,7 @@ func (s *service) AddFriend(username, friendName string) error {
 	if err != nil {
 		return err
 	}
-	if user.ID == 0 {
+	if user.ID == "" {
 		return fmt.Errorf("不存在该用户")
 	}
 
@@ -128,7 +134,7 @@ func (s *service) RemoveFriend(username, friendName string) error {
 	if err != nil {
 		return err
 	}
-	if user.ID == 0 {
+	if user.ID == "" {
 		return fmt.Errorf("不存在该用户")
 	}
 
@@ -156,15 +162,15 @@ func (s *service) GetFriends(username string) (vos []*UserVo, err error) {
 			continue
 		}
 		vos = append(vos, &UserVo{
-			ID: strconv.FormatInt(user.ID, 10),
+			ID: user.ID,
 			Username: user.Username,
 		})
 	}
 	return
 }
 
-func (s *service) IsFriend(username, friendName string) (bool, error) {
-	return s.dao.IsFriend(username, friendName)
+func (s *service) IsFriend(userId, friendId string) (bool, error) {
+	return s.dao.IsFriend(userId, friendId)
 }
 
 

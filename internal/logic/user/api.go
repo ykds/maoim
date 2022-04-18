@@ -138,6 +138,23 @@ func (a *Api) GetUserService() Service {
 	return a.srv
 }
 
+func (a *Api) ApplyFriend(c *gin.Context) {
+	var (
+		arg struct {
+			UserId string `json:"user_id"`
+			OtherUserId string `json:"other_user_id"`
+		}
+	)
+
+	err := c.ShouldBind(&arg)
+	if err != nil {
+		c.JSON(400, gin.H{"code": 400, "message": err.Error()})
+	}
+
+
+
+}
+
 func (a *Api) Shutdown() error {
 	a.grpc.GracefulStop()
 	return nil

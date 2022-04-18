@@ -13,7 +13,7 @@ const (
 	rsv1Bit = 1 << 6
 	rsv2Bit = 1 << 5
 	rsv3Bit = 1 << 4
-	opBit   = 0x0f // 15
+	opBit   = 1 << 4 - 1 // 15
 
 	maskBit = 1 << 7
 	lenBit  = 0x7f

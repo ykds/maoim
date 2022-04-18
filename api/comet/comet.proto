@@ -5,21 +5,13 @@ package maoim.comet;
 option go_package="api/comet;comet";
 
 import "api/protocal/protocal.proto";
-import "google/protobuf/timestamp.proto";
 
 message PushMsgReq {
   repeated string keys = 1;
-  PushMsg push_msg = 2;
+  maoim.protocal.Proto proto = 2;
 }
 
 message PushMsgReply{}
-
-message PushMsg {
-  string from_key = 1;
-  string from_who = 2;
-  google.protobuf.Timestamp time = 3;
-  maoim.protocal.Proto proto = 4;
-}
 
 service Comet {
   rpc PushMsg (PushMsgReq) returns (PushMsgReply) {};

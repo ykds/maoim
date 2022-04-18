@@ -7,7 +7,7 @@ option go_package="api/message;message";
 message AckReq {
   string user_id = 1;
   string username = 2;
-  string msg_id = 3;
+  repeated string msg_id = 3;
 }
 
 message AckReply {}

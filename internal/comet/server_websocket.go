@@ -2,17 +2,19 @@ package comet
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 	"maoim/api/comet"
 	"maoim/api/protocal"
 	pb "maoim/api/user"
+	mpb "maoim/api/message"
 	user2 "maoim/internal/logic/user"
 	"maoim/internal/pkg/utils"
 	"maoim/pkg/websocket"
 	"net"
-	"strconv"
+	"strings"
 	"time"
 )
 
@@ -26,19 +28,19 @@ func (s *Server) auth(c *gin.Context) (*user2.User, error) {
 		return nil, fmt.Errorf("缺少token")
 	}
 
-	username, err := utils.ValidToken(token)
+	userId, username, err := utils.ValidToken(token)
 	if err != nil {
 		return nil, fmt.Errorf("token错误")
 	}
 	reply, err := s.userClient.Connect(context.Background(), &pb.ConnectReq{
+		UserId: userId,
 		Username: username,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("连接异常")
 	}
-	userId, err := strconv.ParseInt(reply.UserId, 10, 64)
 	u := &user2.User{
-		ID: userId,
+		ID: reply.UserId,
 		Username: reply.UserName,
 	}
 	return u, nil
@@ -77,20 +79,20 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user2.User) {
 		_ = conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
 		return
 	}
-	ch.Key = user.Username
+	ch.Key = user.ID + ":" + user.Username
 	_ = s.bucket.PutChannel(ch.Key, ch)
 	defer s.bucket.DeleteChannel(ch.Key)
 
 	g, ctx := errgroup.WithContext(context.Background())
 	g.Go(func() error {
-		return s.ReadMessage(ctx, ch, hb)
+		return s.ReadMessage(ch, hb)
 	})
 	g.Go(func() error {
-		return s.distributeMsg(ctx, ch)
+		return s.distributeMsg(ch)
 	})
 	g.Go(func() error {
 		if err = s.heartbeat(ctx, hb, ch.Key); err != nil {
-			ch.Close()
+			_ = ch.Close()
 			return err
 		}
 		return nil
@@ -100,7 +102,11 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user2.User) {
 	}
 }
 
-func (s *Server) ReadMessage(ctx context.Context, ch *Channel, hb chan<- struct{}) error {
+func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
+	tmp := strings.Split(ch.Key, ":")
+	userId := tmp[0]
+	username := tmp[1]
+
 	var lastHB = time.Now()
 	for {
 		p := &protocal.Proto{}
@@ -114,11 +120,35 @@ func (s *Server) ReadMessage(ctx context.Context, ch *Channel, hb chan<- struct{
 				hb <- struct{}{}
 				lastHB = now
 			}
+		} else if p.Op == protocal.OpAck {
+			msgIds := make([]string, 0)
+			err = json.Unmarshal(p.Body, &msgIds)
+			if err != nil {
+				fmt.Println(err)
+				_ = ch.Push(&protocal.Proto{
+					Op: protocal.OpErr,
+					Body: []byte("ack包解析错误"),
+				})
+				continue
+			}
+			_, err := s.messageClient.AckMsg(context.Background(), &mpb.AckReq{
+				UserId:   userId,
+				Username: username,
+				MsgId:    msgIds,
+			})
+			if err != nil {
+				fmt.Println(err)
+				_ = ch.Push(&protocal.Proto{
+					Op: protocal.OpErr,
+					Body: []byte("ack消息失败"),
+				})
+				continue
+			}
 		}
 	}
 }
 
-func (s *Server) distributeMsg(ctx context.Context, ch *Channel) error {
+func (s *Server) distributeMsg(ch *Channel) error {
 	for {
 		p := ch.Ready()
 		switch p {
@@ -139,18 +169,29 @@ func (s *Server) distributeMsg(ctx context.Context, ch *Channel) error {
 }
 
 func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}, key string) error {
+	tmp := strings.Split(key, ":")
+	userId := tmp[0]
+	username := tmp[1]
+
 	t := time.NewTicker(HeartBeatInterval)
 	defer func() {
 		t.Stop()
-		s.userClient.Disconnect(context.Background(), &pb.DisconnectReq{Username: key})
+		_, _ = s.userClient.Disconnect(context.Background(), &pb.DisconnectReq{
+			UserId: userId,
+			Username: username,
+		})
 	}()
 
 	for {
 		select {
-		case <-t.C:
-			return fmt.Errorf("heartbeat time out. connection closed")
 		case <-hb:
 			t.Reset(HeartBeatInterval)
+			_, _ = s.userClient.Connect(context.Background(), &pb.ConnectReq{
+				UserId: userId,
+				Username: username,
+			})
+		case <-t.C:
+			return fmt.Errorf("heartbeat time out. connection closed")
 		case <-ctx.Done():
 			return ctx.Err()
 		}
