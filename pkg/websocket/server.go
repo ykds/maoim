@@ -14,7 +14,7 @@ const (
 
 func Upgrade(w http.ResponseWriter, r *http.Request) (*Conn, error) {
 	if r.Method != "GET" {
-		return nil, errors.New("http method is error")
+		return nil, errors.New("http method is merror")
 	}
 
 	if strings.ToLower(r.Header.Get("Upgrade")) != "websocket" {

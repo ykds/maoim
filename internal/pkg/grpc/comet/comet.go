@@ -8,14 +8,14 @@ import (
 	"time"
 )
 
-func NewCometGrpcClient() (pb.CometClient, error) {
+func NewCometGrpcClient() pb.CometClient {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	dial, err := grpc.DialContext(ctx, ":9000", []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}...)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	return pb.NewCometClient(dial), nil
+	return pb.NewCometClient(dial)
 }

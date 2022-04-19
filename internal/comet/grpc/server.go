@@ -6,6 +6,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"google.golang.org/grpc"
+	"maoim/api/protocal"
 	"net"
 
 	pb "maoim/api/comet"
@@ -45,11 +46,46 @@ func (s *server) PushMsg(ctx context.Context, req *pb.PushMsgReq) (*pb.PushMsgRe
 	for _, key := range req.Keys {
 		ch, err := s.srv.Bucket().GetChannel(key)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		if err := ch.Push(req.Proto); err != nil {
 			return nil, err
 		}
 	}
 	return &pb.PushMsgReply{}, nil
+}
+
+
+func (s *server) NewFriendShipApplyNotice(ctx context.Context, req *pb.NewFriendShipApplyNoticeReq) (*pb.NewFriendShipApplyNoticeReply, error) {
+	if req.GetUserId() == "" {
+		return nil, errors.New("req params is invalid")
+	}
+	channel, err := s.srv.Bucket().GetChannel(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	p := protocal.Proto{
+		Op: protocal.OpNewFriendShipApplyNotice,
+	}
+	if err := channel.Push(&p); err != nil {
+		return nil, err
+	}
+	return &pb.NewFriendShipApplyNoticeReply{}, nil
+}
+
+func (s *server) FriendShipApplyPassNotice(ctx context.Context, req *pb.FriendShipApplyPassReq) (*pb.FriendShipApplyPassReply, error) {
+	if req.GetUserId() == "" {
+		return nil, errors.New("req params is invalid")
+	}
+	channel, err := s.srv.Bucket().GetChannel(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	p := protocal.Proto{
+		Op: protocal.OpNewFriendShipPassNotice,
+	}
+	if err := channel.Push(&p); err != nil {
+		return nil, err
+	}
+	return &pb.FriendShipApplyPassReply{}, nil
 }

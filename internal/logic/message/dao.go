@@ -10,29 +10,29 @@ import (
 var _ Dao = new(dao)
 
 type SaveMsgDo struct {
-	SendUserId string
+	SendUserId    string
 	ReceiveUserId string
-	Content string
-	ContentType int8
+	Content       string
+	ContentType   int8
 }
 
 type PullMsgDo struct {
-	SendUserId string
-	MsgId string
-	Content string
+	SendUserId  string
+	MsgId       string
+	Content     string
 	ContentType int8
 }
 
 type Dao interface {
 	PushMsg(ctx context.Context, req *cpb.PushMsgReq) error
 	SaveMsg(ctx context.Context, do *SaveMsgDo) error
-	AckMsg(userId, msgId string) error
+	AckMsg(userId string, msgId []string) error
 	ListUnReadMsg(userId string) ([]*PullMsgDo, error)
 }
 
 type dao struct {
 	cometClient cpb.CometClient
-	db *mysql.Mysql
+	db          *mysql.Mysql
 }
 
 func (d *dao) ListUnReadMsg(userId string) ([]*PullMsgDo, error) {
@@ -50,9 +50,9 @@ func (d *dao) ListUnReadMsg(userId string) ([]*PullMsgDo, error) {
 			return nil, err
 		}
 		result = append(result, &PullMsgDo{
-			SendUserId: mi.OtherSideUserId,
-			MsgId: mi.MsgId,
-			Content: mc.Content,
+			SendUserId:  mi.OtherSideUserId,
+			MsgId:       mi.MsgId,
+			Content:     mc.Content,
 			ContentType: mc.ContentType,
 		})
 	}
@@ -70,7 +70,7 @@ func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
 		}()
 
 		mc := MessageContent{
-			Content: do.Content,
+			Content:     do.Content,
 			ContentType: do.ContentType,
 		}
 		err = d.db.GetDB().Create(&mc).Error
@@ -79,17 +79,17 @@ func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
 		}
 
 		sMi := MessageIndex{
-			UserId: do.SendUserId,
+			UserId:          do.SendUserId,
 			OtherSideUserId: do.ReceiveUserId,
-			Box: 0,
-			Read: 1,
-			MsgId: mc.ID,
+			Box:             0,
+			Read:            1,
+			MsgId:           mc.ID,
 		}
 		rMi := MessageIndex{
-			UserId: do.ReceiveUserId,
+			UserId:          do.ReceiveUserId,
 			OtherSideUserId: do.SendUserId,
-			Box: 1,
-			MsgId: mc.ID,
+			Box:             1,
+			MsgId:           mc.ID,
 		}
 		mis := []MessageIndex{sMi, rMi}
 		return tx.Create(&mis).Error
@@ -101,14 +101,15 @@ func (d *dao) PushMsg(ctx context.Context, req *cpb.PushMsgReq) error {
 	return err
 }
 
-
-func (d *dao) AckMsg(userId, msgId string) error {
-	return d.db.GetDB().Where("user_id = ? and msg_id = ?", userId, msgId).Update("read", 1).Error
+func (d *dao) AckMsg(userId string, msgId []string) error {
+	return d.db.GetDB().Model(&MessageIndex{}).Where("user_id = ? AND box = 1 AND msg_id in ?", userId, msgId).Update("read", 1).Error
 }
 
 func NewDao(cometClient cpb.CometClient, db *mysql.Mysql) Dao {
-	return &dao {
+	_ = db.GetDB().AutoMigrate(&MessageIndex{}, &MessageContent{})
+
+	return &dao{
 		cometClient: cometClient,
-		db: db,
+		db:          db,
 	}
 }

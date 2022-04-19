@@ -23,8 +23,8 @@ type Channel struct {
 
 func NewChannel(conn *websocket.Conn) *Channel {
 	return &Channel{
-		Conn:      conn,
-		signal:    make(chan *protocal.Proto, 10),
+		Conn:   conn,
+		signal: make(chan *protocal.Proto, 10),
 		//ProtoRing: New(5),
 	}
 }
@@ -56,7 +56,7 @@ func (c *Channel) ReadMessage(p *protocal.Proto) (err error) {
 }
 
 func (c *Channel) WriteMessage(p *protocal.Proto) error {
-	return c.Conn.WriteWebsocket(websocket.TextFrame, p.Pack())
+	return c.Conn.WriteWebsocket(websocket.BinaryFrame, p.Pack())
 }
 
 func (c *Channel) WriteHeartBeat() error {

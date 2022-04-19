@@ -12,16 +12,16 @@ var (
 
 type Claims struct {
 	jwt.StandardClaims
-	ID string
+	ID       string
 	Username string
 }
 
 func GenToken(ID string, username string) (string, error) {
 	claims := &Claims{
-		StandardClaims: jwt.StandardClaims {
+		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(7 * 24 * time.Hour).Unix(),
 		},
-		ID: ID,
+		ID:       ID,
 		Username: username,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

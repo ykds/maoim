@@ -12,4 +12,7 @@ const (
 	OpAck = int32(6)
 
 	OpErr = int32(7)
+
+	OpNewFriendShipApplyNotice = int32(8)
+	OpNewFriendShipPassNotice = int32(9)
 )

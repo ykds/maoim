@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"github.com/go-redis/redis/v8"
+	"time"
 )
 
 type Redis struct {
@@ -19,6 +20,14 @@ func New(c *Config) *Redis {
 	return &Redis{
 		rdb: rdb,
 	}
+}
+
+func (r *Redis) Set(key string, value interface{}, ex time.Duration) error {
+	return r.rdb.Set(context.Background(), key, value, ex).Err()
+}
+
+func (r *Redis) Get(key string) (string, error) {
+	return r.rdb.Get(context.Background(), key).Result()
 }
 
 func (r *Redis) HExists(key string, field string) (bool, error) {
@@ -54,7 +63,7 @@ func (r *Redis) LRange(key string, start, stop int64) ([]string, error) {
 	return r.rdb.LRange(context.Background(), key, start, stop).Result()
 }
 
-func (r *Redis) SAdd(key string, value ...interface{}) error  {
+func (r *Redis) SAdd(key string, value ...interface{}) error {
 	return r.rdb.SAdd(context.Background(), key, value...).Err()
 }
 

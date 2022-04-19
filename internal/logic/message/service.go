@@ -14,7 +14,7 @@ const (
 )
 
 type PushMsgBo struct {
-	Key string
+	Key  string
 	Op   int32
 	Seq  int32
 	Body string
@@ -23,23 +23,23 @@ type PushMsgBo struct {
 }
 
 type PullMsgBo struct {
-	SendUserId string `json:"send_user_id"`
-	MsgId string `json:"msg_id"`
-	Content string `json:"content"`
-	ContentType int8 `json:"content_type"`
+	SendUserId  string `json:"send_user_id"`
+	MsgId       string `json:"msg_id"`
+	Content     string `json:"content"`
+	ContentType int8   `json:"content_type"`
 }
 
 type Service interface {
 	GetUserService() user.Service
 	PushMsg(bo *PushMsgBo) error
-	AckMsg(userId string, msgId string) error
+	AckMsg(userId string, msgId []string) error
 	SaveMsg(do *SaveMsgDo) error
 	PullMsg(userId string) ([]*PullMsgBo, error)
 }
 
 type service struct {
 	userSrv user.Service
-	d Dao
+	d       Dao
 }
 
 func (s *service) PullMsg(userId string) ([]*PullMsgBo, error) {
@@ -50,9 +50,9 @@ func (s *service) PullMsg(userId string) ([]*PullMsgBo, error) {
 	result := make([]*PullMsgBo, 0, len(unReadMsg))
 	for _, msg := range unReadMsg {
 		result = append(result, &PullMsgBo{
-			SendUserId: msg.SendUserId,
-			MsgId: msg.MsgId,
-			Content: msg.Content,
+			SendUserId:  msg.SendUserId,
+			MsgId:       msg.MsgId,
+			Content:     msg.Content,
 			ContentType: msg.ContentType,
 		})
 	}
@@ -61,7 +61,7 @@ func (s *service) PullMsg(userId string) ([]*PullMsgBo, error) {
 
 func NewService(d Dao, userSrv user.Service) Service {
 	return &service{
-		d: d,
+		d:       d,
 		userSrv: userSrv,
 	}
 }
@@ -69,7 +69,6 @@ func NewService(d Dao, userSrv user.Service) Service {
 func (s *service) GetUserService() user.Service {
 	return s.userSrv
 }
-
 
 func (s *service) SaveMsg(do *SaveMsgDo) error {
 	return s.d.SaveMsg(context.Background(), do)
@@ -94,9 +93,7 @@ func (s *service) canPush(userId, friendId, msg string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
-	// 查询是否在线
-	return s.userSrv.IsOnline(userId)
+	return true, nil
 }
 
 func (s *service) PushMsg(bo *PushMsgBo) error {
@@ -121,7 +118,6 @@ func (s *service) PushMsg(bo *PushMsgBo) error {
 	return s.d.PushMsg(context.Background(), req)
 }
 
-
-func (s *service) AckMsg(userId string, msgId string) error {
+func (s *service) AckMsg(userId string, msgId []string) error {
 	return s.d.AckMsg(userId, msgId)
 }

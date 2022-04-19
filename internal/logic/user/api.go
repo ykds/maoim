@@ -3,18 +3,21 @@ package user
 import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
-	grpc2 "maoim/internal/logic/user/grpc"
+	"maoim/api/comet"
+	"maoim/internal/pkg/resp"
+	"net/http"
 )
 
 type Api struct {
-	srv  Service
-	grpc *grpc.Server
+	srv         Service
+	grpc        *grpc.Server
+	cometClient comet.CometClient
 }
 
 func NewApi(srv Service, g *gin.Engine) *Api {
 	a := &Api{
-		srv: srv,
-		grpc: grpc2.NewUserGrpcServer(srv),
+		srv:  srv,
+		grpc: NewUserGrpcServer(srv),
 	}
 	a.InitRouter(g)
 	return a
@@ -34,17 +37,6 @@ func (a *Api) Register(c *gin.Context) {
 		return
 	}
 
-	exists, err := a.srv.Exists(arg.Username)
-	if err != nil {
-		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
-		return
-	}
-	if exists {
-		c.JSON(200, gin.H{"code": 0, "message": "用户名已存在"})
-		return
-	}
-
-
 	u, err := a.srv.Register(arg.Username, arg.Password)
 	if err != nil {
 		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
@@ -56,18 +48,18 @@ func (a *Api) Register(c *gin.Context) {
 func (a *Api) Login(c *gin.Context) {
 	var (
 		arg struct {
-			Username string `json:"username"`
+			UserId string `json:"user_id"`
 			Password string `json:"password"`
 		}
 	)
 
 	err := c.ShouldBind(&arg)
-	if err != nil || arg.Username == "" || arg.Password == "" {
-		c.JSON(200, gin.H{"code": 400, "message": "username或password为空"})
+	if err != nil || arg.UserId == "" || arg.Password == "" {
+		c.JSON(200, gin.H{"code": 400, "message": "user_id或password为空"})
 		return
 	}
 
-	token, err := a.srv.Login(arg.Username, arg.Password)
+	token, err := a.srv.Login(arg.UserId, arg.Password)
 	if err != nil {
 		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
 		return
@@ -110,17 +102,17 @@ func (a *Api) DeleteFriend(c *gin.Context) {
 	u := user.(*User)
 
 	err := c.ShouldBind(&arg)
-	if err != nil ||  arg.FriendName == "" {
-		c.JSON(200, gin.H{"code": 400, "message": "friendname为空"})
+	if err != nil || arg.FriendName == "" {
+		resp.Response(c, http.StatusBadRequest, "friendname为空", nil)
 		return
 	}
 
 	err = a.srv.RemoveFriend(u.Username, arg.FriendName)
 	if err != nil {
-		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
-	c.JSON(200, gin.H{"code": 200, "message": "success"})
+	resp.SuccessResponse(c, nil)
 }
 
 func (a *Api) GetFriends(c *gin.Context) {
@@ -128,10 +120,10 @@ func (a *Api) GetFriends(c *gin.Context) {
 	u := user.(*User)
 	friends, err := a.srv.GetFriends(u.Username)
 	if err != nil {
-		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
-	c.JSON(200, gin.H{"code": 200, "message": "success", "data": friends})
+	resp.SuccessResponse(c, friends)
 }
 
 func (a *Api) GetUserService() Service {
@@ -141,18 +133,100 @@ func (a *Api) GetUserService() Service {
 func (a *Api) ApplyFriend(c *gin.Context) {
 	var (
 		arg struct {
-			UserId string `json:"user_id"`
+			UserId      string `json:"user_id"`
 			OtherUserId string `json:"other_user_id"`
+			Remark      string `json:"remark"`
 		}
 	)
 
 	err := c.ShouldBind(&arg)
 	if err != nil {
-		c.JSON(400, gin.H{"code": 400, "message": err.Error()})
+		resp.Response(c, http.StatusBadRequest, err.Error(), nil)
+		return
 	}
 
+	err = a.srv.ApplyFriend(arg.UserId, arg.OtherUserId, arg.Remark)
+	if err != nil {
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+	resp.SuccessResponse(c, nil)
+}
 
+type ApplyRecord struct {
+	ID string `json:"id"`
+	ApplyUserId string `json:"apply_user_id"`
+	ApplyUsername string `json:"apply_username"`
+	AppliedUserId string `json:"applied_user_id"`
+	Remark string `json:"remark"`
+	ApplyTime string `json:"apply_time"`
+}
 
+func (a *Api) ListApplyRecord(c *gin.Context) {
+	userId := c.Query("userId")
+	if userId == "" {
+		resp.Response(c, http.StatusBadRequest, "参数错误", nil)
+		return
+	}
+	applying := c.Query("applying") == "1"
+	record, err := a.srv.ListApplyRecord(userId, applying)
+	if err != nil {
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	result := make([]ApplyRecord, len(record))
+	for i, r := range record {
+		result[i] = ApplyRecord{
+			ID: r.ID,
+			ApplyUserId: r.UserId,
+			ApplyUsername: r.Username,
+			AppliedUserId: r.OtherUserId,
+			Remark: r.Remark,
+			ApplyTime: r.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+	}
+	resp.SuccessResponse(c, result)
+}
+
+func (a *Api) ListOffsetApplyRecord(c *gin.Context) {
+	userId := c.Query("userId")
+	recordId := c.Query("recordId")
+	if userId == "" || recordId == ""{
+		resp.Response(c, http.StatusBadRequest, "参数错误", nil)
+		return
+	}
+
+	applying := c.Query("applying")
+	record, err := a.srv.ListOffsetApplyRecord(userId, recordId, applying == "1")
+	if err != nil {
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+	resp.SuccessResponse(c, record)
+}
+
+func (a *Api) AgreeFriendShipApply(c *gin.Context) {
+	var (
+		req struct {
+			RecordId string `json:"record_id"`
+		}
+	)
+	err := c.BindJSON(&req)
+	if req.RecordId == "" {
+		resp.Response(c, http.StatusBadRequest, "参数错误", nil)
+		return
+	}
+
+	user, _ := c.Get("user")
+	u := user.(*User)
+
+	err = a.srv.AgreeFriendShipApply(u.ID, req.RecordId)
+	if err != nil {
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+	resp.SuccessResponse(c, nil)
 }
 
 func (a *Api) Shutdown() error {

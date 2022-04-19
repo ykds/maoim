@@ -1,14 +1,18 @@
 package user
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"gorm.io/gorm"
+	"maoim/api/comet"
+	"maoim/internal/pkg/encrypt"
 	"maoim/internal/pkg/utils"
-	"math/rand"
-	"strconv"
+	"maoim/pkg/merror"
 )
 
 type UserVo struct {
-	ID string `json:"id"`
+	ID       string `json:"id"`
 	Username string `json:"username"`
 }
 
@@ -18,61 +22,70 @@ type Service interface {
 	Register(username, password string) (*User, error)
 	Login(username, password string) (string, error)
 	Logout(userId string) error
-	Exists(username string) (bool, error)
-	GetUser(username string) (*User, error)
+	GetUser(userId string) (*User, error)
 	Auth(token string) (*User, error)
 
-	AddFriend(username, friendName string) error
-	RemoveFriend(username, friendName string) error
-	GetFriends(username string) ([]*UserVo, error)
+	GetFriends(userId string) ([]*UserVo, error)
+	ApplyFriend(userId, otherUserId, remark string) error
+	AddFriend(userId, otherUserId string) error
+	RemoveFriend(userId, otherUserId string) error
 	IsFriend(userId, friendId string) (bool, error)
 
-	Connect(username string) error
-	Disconnect(username string) error
+	ListApplyRecord(userId string, applying bool) ([]*FriendShipApply, error)
+	ListOffsetApplyRecord(userId, recordId string, applying bool) ([]*FriendShipApply, error)
+	AgreeFriendShipApply(userId, recordId string) error
 
+	Connect(userId string) error
+	Disconnect(userId string) error
 	IsOnline(userId string) (bool, error)
 }
 
 type service struct {
-	dao Dao
+	dao         Dao
+	cometClient comet.CometClient
 }
 
-func (s *service) IsOnline(userId string) (bool, error) {
-	return s.dao.IsOnline(userId)
-}
-
-func NewService(d Dao) Service {
-	return &service{dao: d}
-}
-
-func (s *service) Register(username, password string) (*User, error) {
-	u, err := s.dao.LoadUser(username)
-	if err != nil {
-		return nil, err
+func NewService(d Dao, cometClient comet.CometClient) Service {
+	return &service{
+		dao:         d,
+		cometClient: cometClient,
 	}
-	if u.ID != "" {
-		return nil, fmt.Errorf("user has registered")
+}
+
+
+func (s *service) Register(username, password string) (u *User, err error) {
+	_, err = s.dao.GetUserByUsername(username)
+	// err = nil 时，说明没有报找不到err或其它err
+	if err == nil {
+		err = HasRegisterErr
+		return
+	}
+	// 查询 db 报其它err
+	if err != gorm.ErrRecordNotFound{
+		err = merror.WithMessage(err, "注册用户失败")
+		return
 	}
 
 	u = &User{
-		ID:       strconv.FormatInt(rand.Int63(), 10),
 		Username: username,
-		Password: password,
+		Password: encrypt.Encrypt([]byte(password)),
 	}
 	err = s.dao.SaveUser(u)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return u, nil
+	return
 }
 
-func (s *service) Login(username, password string) (string, error) {
-	u, err := s.dao.LoadUser(username)
+func (s *service) Login(userId, password string) (str string, err error) {
+	u, err := s.dao.GetUser(userId)
 	if err != nil {
-		return "", err
+		err = LoginFailErr
+		return
 	}
-	if password != u.Password {
-		return "", fmt.Errorf("密码错误")
+	if encrypt.Encrypt([]byte(password)) != u.Password {
+		err = PasswordErrorErr
+		return
 	}
 	return utils.GenToken(u.ID, u.Username)
 }
@@ -81,28 +94,54 @@ func (s *service) Logout(userId string) error {
 	return s.dao.DeleteUser(userId)
 }
 
-func (s *service) Exists(username string) (bool, error) {
-	user, err := s.dao.LoadUser(username)
-	return user != nil && user.ID != "", err
+func (s *service) GetUser(userId string) (*User, error) {
+	return s.dao.GetUser(userId)
 }
 
-func (s *service) GetUser(username string) (*User, error) {
-	return s.dao.LoadUser(username)
-}
-
-func (s *service) Auth(token string) (*User, error) {
+func (s *service) Auth(token string) (u *User, err error) {
 	if token == "" {
-		return nil, fmt.Errorf("token不能为空")
+		err = TokenEmptyErr
+		return
 	}
-	_, username, err := utils.ValidToken(token)
+	userId, _, err := utils.ValidToken(token)
 	if err != nil {
-		return nil, fmt.Errorf("token错误")
+		err = TokenCheckFailErr
+		return
 	}
-	return s.GetUser(username)
+	return s.GetUser(userId)
 }
 
-func (s *service) AddFriend(username, friendName string) error {
-	user, err := s.GetUser(friendName)
+
+func (s *service) ApplyFriend(userId, otherUserId, remark string) error {
+	isFriend, err := s.IsFriend(userId, otherUserId)
+	if err != nil {
+		return err
+	}
+	if isFriend {
+		return AlreadyFriendErr
+	}
+
+	record, err := s.dao.GetApplyRecordByUserId(userId, otherUserId)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return err
+	}
+	if record != nil && record.ID != "" {
+		return errors.New("重复申请")
+	}
+
+	err = s.dao.SaveApplyRecord(userId, otherUserId, remark)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.cometClient.NewFriendShipApplyNotice(context.Background(), &comet.NewFriendShipApplyNoticeReq{
+		UserId: otherUserId,
+	})
+	return err
+}
+
+func (s *service) AddFriend(userId, otherUserId string) error {
+	user, err := s.GetUser(otherUserId)
 	if err != nil {
 		return err
 	}
@@ -110,7 +149,7 @@ func (s *service) AddFriend(username, friendName string) error {
 		return fmt.Errorf("不存在该用户")
 	}
 
-	ok, err := s.IsFriend(username, friendName)
+	ok, err := s.IsFriend(userId, otherUserId)
 	if err != nil {
 		return err
 	}
@@ -118,8 +157,8 @@ func (s *service) AddFriend(username, friendName string) error {
 		return fmt.Errorf("已添加该好友")
 	}
 
-	err1 := s.dao.AddFriend(username, friendName)
-	err2 := s.dao.AddFriend(friendName, username)
+	err1 := s.dao.AddFriend(userId, otherUserId)
+	err2 := s.dao.AddFriend(otherUserId, userId)
 	if err1 != nil {
 		return err1
 	}
@@ -129,8 +168,8 @@ func (s *service) AddFriend(username, friendName string) error {
 	return nil
 }
 
-func (s *service) RemoveFriend(username, friendName string) error {
-	user, err := s.GetUser(friendName)
+func (s *service) RemoveFriend(userId, otherUserId string) error {
+	user, err := s.GetUser(otherUserId)
 	if err != nil {
 		return err
 	}
@@ -138,7 +177,7 @@ func (s *service) RemoveFriend(username, friendName string) error {
 		return fmt.Errorf("不存在该用户")
 	}
 
-	ok, err := s.IsFriend(username, friendName)
+	ok, err := s.IsFriend(userId, otherUserId)
 	if err != nil {
 		return err
 	}
@@ -146,24 +185,27 @@ func (s *service) RemoveFriend(username, friendName string) error {
 		return fmt.Errorf("无此好友")
 	}
 
-	return s.dao.RemoveFriend(username, friendName)
+	return s.dao.RemoveFriend(userId, otherUserId)
 }
 
-func (s *service) GetFriends(username string) (vos []*UserVo, err error) {
-	friends, err := s.dao.GetFriends(username)
+func (s *service) GetFriends(userId string) (vos []*UserVo, err error) {
+	friends, err := s.dao.GetFriendList(userId)
 	if err != nil {
 		return
 	}
 
-	vos = make([]*UserVo, 0)
+	fuserIds := make([]string, 0)
 	for _, f := range friends {
-		user, err := s.GetUser(f)
-		if err != nil {
-			continue
-		}
+		fuserIds = append(fuserIds, f.FUserId)
+	}
+	users, err := s.dao.BatchGetUser(fuserIds)
+	if err != nil {
+		return
+	}
+	for _, u := range users {
 		vos = append(vos, &UserVo{
-			ID: user.ID,
-			Username: user.Username,
+			ID: u.ID,
+			Username: u.Username,
 		})
 	}
 	return
@@ -174,10 +216,48 @@ func (s *service) IsFriend(userId, friendId string) (bool, error) {
 }
 
 
-func (s *service) Disconnect(username string) error {
-	return s.dao.SetOffline(username)
+func (s *service) ListApplyRecord(userId string, applying bool) ([]*FriendShipApply, error) {
+	return s.dao.ListApplyRecord(userId, applying)
 }
 
-func (s *service) Connect(username string) error {
-	return s.dao.SetOnline(username)
+func (s *service) ListOffsetApplyRecord(userId, recordId string, applying bool) ([]*FriendShipApply, error) {
+	return s.dao.ListOffsetApplyRecord(userId, recordId, applying)
+}
+
+func (s service) AgreeFriendShipApply(userId, recordId string) error {
+	record, err := s.dao.GetApplyRecord(recordId)
+	if err != nil {
+		return err
+	}
+	if record.OtherUserId != userId {
+		return errors.New("操作异常")
+	}
+	record.Agree = true
+	err = s.dao.UpdateApplyRecord(record)
+	if err != nil {
+		return err
+	}
+
+	err = s.AddFriend(record.UserId, record.OtherUserId)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.cometClient.FriendShipApplyPassNotice(context.Background(), &comet.FriendShipApplyPassReq{
+		UserId: record.UserId,
+	})
+	return err
+}
+
+
+func (s *service) Disconnect(userId string) error {
+	return s.dao.SetOffline(userId)
+}
+
+func (s *service) Connect(userId string) error {
+	return s.dao.SetOnline(userId)
+}
+
+func (s *service) IsOnline(userId string) (bool, error) {
+	return s.dao.IsOnline(userId)
 }

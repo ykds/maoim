@@ -1,32 +1,32 @@
 package protocal
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 const (
-	_opSize = 2
-	_ackSize = 2
-	_seqSize = 4
+	_opSize     = 2
+	_ackSize    = 2
+	_seqSize    = 4
 	_lengthSize = 4
 	_headerSize = _opSize + _ackSize + _seqSize + _lengthSize
 
-	_opOffset = _opSize
-	_ackOffset = _opOffset + _ackSize
-	_seqOffset = _ackOffset + _seqSize
+	_opOffset     = _opSize
+	_ackOffset    = _opOffset + _ackSize
+	_seqOffset    = _ackOffset + _seqSize
 	_lengthOffset = _seqOffset + _lengthSize
 )
 
 func (p *Proto) Pack() []byte {
 	bodyLen := len(p.Body)
-	if bodyLen == 0 {
-		return nil
-	}
-
-	buf := make([]byte, _headerSize + bodyLen)
-	binary.BigEndian.PutUint32(buf[:_opOffset], uint32(p.Op))
-	binary.BigEndian.PutUint32(buf[_opOffset:_ackOffset], uint32(p.Ack))
+	buf := make([]byte, _headerSize+bodyLen)
+	binary.BigEndian.PutUint16(buf[:_opOffset], uint16(p.Op))
+	binary.BigEndian.PutUint16(buf[_opOffset:_ackOffset], uint16(p.Ack))
 	binary.BigEndian.PutUint32(buf[_ackOffset:_seqOffset], uint32(p.Seq))
 	binary.BigEndian.PutUint32(buf[_seqOffset:_lengthOffset], uint32(bodyLen))
-	copy(buf[_lengthOffset:], p.Body)
+	if bodyLen != 0 {
+		copy(buf[_lengthOffset:], p.Body)
+	}
 	return buf
 }
 

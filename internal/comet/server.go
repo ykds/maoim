@@ -10,18 +10,18 @@ import (
 )
 
 type Server struct {
-	c *conf.Config
-	rdb    *redis.Redis
-	bucket *Bucket
-	userClient pb.UserClient
+	c             *conf.Config
+	rdb           *redis.Redis
+	bucket        *Bucket
+	userClient    pb.UserClient
 	messageClient message.MessageClient
 }
 
 func NewServer(rdb *redis.Redis) *Server {
 	return &Server{
-		rdb:    rdb,
-		bucket: NewBucket(1024),
-		userClient: user.NewUserGrpcClient(),
+		rdb:           rdb,
+		bucket:        NewBucket(1024),
+		userClient:    user.NewUserGrpcClient(),
 		messageClient: mess.NewMessageGrpcClient(),
 	}
 }
@@ -29,4 +29,3 @@ func NewServer(rdb *redis.Redis) *Server {
 func (s *Server) Bucket() *Bucket {
 	return s.bucket
 }
-

@@ -7,19 +7,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 	"maoim/api/comet"
+	mpb "maoim/api/message"
 	"maoim/api/protocal"
 	pb "maoim/api/user"
-	mpb "maoim/api/message"
 	user2 "maoim/internal/logic/user"
 	"maoim/internal/pkg/utils"
 	"maoim/pkg/websocket"
 	"net"
-	"strings"
 	"time"
 )
 
 const (
-	HeartBeatInterval = 5 * time.Minute
+	HeartBeatInterval = 100 * time.Minute
 )
 
 func (s *Server) auth(c *gin.Context) (*user2.User, error) {
@@ -33,16 +32,15 @@ func (s *Server) auth(c *gin.Context) (*user2.User, error) {
 		return nil, fmt.Errorf("token错误")
 	}
 	reply, err := s.userClient.Connect(context.Background(), &pb.ConnectReq{
-		UserId: userId,
+		UserId:   userId,
 		Username: username,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("连接异常")
 	}
-	u := &user2.User{
-		ID: reply.UserId,
-		Username: reply.UserName,
-	}
+	u := &user2.User{}
+	u.ID = reply.UserId
+	u.Username = reply.UserName
 	return u, nil
 }
 
@@ -70,16 +68,16 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user2.User) {
 		hb  = make(chan struct{})
 	)
 
-	fmt.Printf("%d is online.\n", user.ID)
+	fmt.Printf("(%s, %s) is online.\n", user.ID, user.Username)
 
 	ch := NewChannel(conn)
 	ch.IP, ch.Port, err = net.SplitHostPort(c.RemoteAddr().String())
 	if err != nil {
-		_ = ch.Conn.WriteWebsocket(websocket.TextFrame, []byte("IP Address format error"))
+		_ = ch.Conn.WriteWebsocket(websocket.TextFrame, []byte("IP Address format merror"))
 		_ = conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
 		return
 	}
-	ch.Key = user.ID + ":" + user.Username
+	ch.Key = user.ID
 	_ = s.bucket.PutChannel(ch.Key, ch)
 	defer s.bucket.DeleteChannel(ch.Key)
 
@@ -98,15 +96,11 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user2.User) {
 		return nil
 	})
 	if err = g.Wait(); err != nil {
-		fmt.Println(ch.Key + " is offline")
+		fmt.Printf("(%s, %s) is offline\n", user.ID, user.Username)
 	}
 }
 
 func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
-	tmp := strings.Split(ch.Key, ":")
-	userId := tmp[0]
-	username := tmp[1]
-
 	var lastHB = time.Now()
 	for {
 		p := &protocal.Proto{}
@@ -126,20 +120,19 @@ func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
 			if err != nil {
 				fmt.Println(err)
 				_ = ch.Push(&protocal.Proto{
-					Op: protocal.OpErr,
+					Op:   protocal.OpErr,
 					Body: []byte("ack包解析错误"),
 				})
 				continue
 			}
 			_, err := s.messageClient.AckMsg(context.Background(), &mpb.AckReq{
-				UserId:   userId,
-				Username: username,
+				UserId:   ch.Key,
 				MsgId:    msgIds,
 			})
 			if err != nil {
 				fmt.Println(err)
 				_ = ch.Push(&protocal.Proto{
-					Op: protocal.OpErr,
+					Op:   protocal.OpErr,
 					Body: []byte("ack消息失败"),
 				})
 				continue
@@ -169,16 +162,11 @@ func (s *Server) distributeMsg(ch *Channel) error {
 }
 
 func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}, key string) error {
-	tmp := strings.Split(key, ":")
-	userId := tmp[0]
-	username := tmp[1]
-
 	t := time.NewTicker(HeartBeatInterval)
 	defer func() {
 		t.Stop()
 		_, _ = s.userClient.Disconnect(context.Background(), &pb.DisconnectReq{
-			UserId: userId,
-			Username: username,
+			UserId:   key,
 		})
 	}()
 
@@ -187,8 +175,7 @@ func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}, key string) 
 		case <-hb:
 			t.Reset(HeartBeatInterval)
 			_, _ = s.userClient.Connect(context.Background(), &pb.ConnectReq{
-				UserId: userId,
-				Username: username,
+				UserId:   key,
 			})
 		case <-t.C:
 			return fmt.Errorf("heartbeat time out. connection closed")

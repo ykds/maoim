@@ -13,6 +13,19 @@ message PushMsgReq {
 
 message PushMsgReply{}
 
+
+message NewFriendShipApplyNoticeReq {
+  string user_id = 1;
+}
+message NewFriendShipApplyNoticeReply {}
+
+message FriendShipApplyPassReq {
+  string user_id = 1;
+}
+message FriendShipApplyPassReply {}
+
 service Comet {
   rpc PushMsg (PushMsgReq) returns (PushMsgReply) {};
+  rpc NewFriendShipApplyNotice (NewFriendShipApplyNoticeReq) returns (NewFriendShipApplyNoticeReply) {};
+  rpc FriendShipApplyPassNotice (FriendShipApplyPassReq) returns (FriendShipApplyPassReply) {};
 }

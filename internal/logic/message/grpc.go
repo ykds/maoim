@@ -1,4 +1,4 @@
-package grpc
+package message
 
 import (
 	"context"
@@ -6,16 +6,16 @@ import (
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"google.golang.org/grpc"
 	pb "maoim/api/message"
-	"maoim/internal/logic/message"
 	"net"
 )
+
 type Server struct {
 	pb.UnimplementedMessageServer
 
-	srv message.Service
+	srv Service
 }
 
-func NewMessageGrpcServer(srv message.Service) *grpc.Server {
+func NewMessageGrpcServer(srv Service) *grpc.Server {
 	server := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 		grpc_recovery.UnaryServerInterceptor())))
 	pb.RegisterMessageServer(server, &Server{srv: srv})
@@ -35,4 +35,3 @@ func NewMessageGrpcServer(srv message.Service) *grpc.Server {
 func (s *Server) AckMsg(ctx context.Context, req *pb.AckReq) (*pb.AckReply, error) {
 	return &pb.AckReply{}, s.srv.AckMsg(req.UserId, req.MsgId)
 }
-

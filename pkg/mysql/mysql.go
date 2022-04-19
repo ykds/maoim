@@ -23,3 +23,7 @@ func New(conf *Config) *Mysql {
 func (m *Mysql) GetDB() *gorm.DB {
 	return m.db
 }
+
+func (m *Mysql) Query() *gorm.DB {
+	return m.db.Scopes(UnDeletedScope)
+}

@@ -19,6 +19,8 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CometClient interface {
 	PushMsg(ctx context.Context, in *PushMsgReq, opts ...grpc.CallOption) (*PushMsgReply, error)
+	NewFriendShipApplyNotice(ctx context.Context, in *NewFriendShipApplyNoticeReq, opts ...grpc.CallOption) (*NewFriendShipApplyNoticeReply, error)
+	FriendShipApplyPassNotice(ctx context.Context, in *FriendShipApplyPassReq, opts ...grpc.CallOption) (*FriendShipApplyPassReply, error)
 }
 
 type cometClient struct {
@@ -38,11 +40,31 @@ func (c *cometClient) PushMsg(ctx context.Context, in *PushMsgReq, opts ...grpc.
 	return out, nil
 }
 
+func (c *cometClient) NewFriendShipApplyNotice(ctx context.Context, in *NewFriendShipApplyNoticeReq, opts ...grpc.CallOption) (*NewFriendShipApplyNoticeReply, error) {
+	out := new(NewFriendShipApplyNoticeReply)
+	err := c.cc.Invoke(ctx, "/maoim.comet.Comet/NewFriendShipApplyNotice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cometClient) FriendShipApplyPassNotice(ctx context.Context, in *FriendShipApplyPassReq, opts ...grpc.CallOption) (*FriendShipApplyPassReply, error) {
+	out := new(FriendShipApplyPassReply)
+	err := c.cc.Invoke(ctx, "/maoim.comet.Comet/FriendShipApplyPassNotice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CometServer is the server API for Comet service.
 // All implementations must embed UnimplementedCometServer
 // for forward compatibility
 type CometServer interface {
 	PushMsg(context.Context, *PushMsgReq) (*PushMsgReply, error)
+	NewFriendShipApplyNotice(context.Context, *NewFriendShipApplyNoticeReq) (*NewFriendShipApplyNoticeReply, error)
+	FriendShipApplyPassNotice(context.Context, *FriendShipApplyPassReq) (*FriendShipApplyPassReply, error)
 	mustEmbedUnimplementedCometServer()
 }
 
@@ -52,6 +74,12 @@ type UnimplementedCometServer struct {
 
 func (UnimplementedCometServer) PushMsg(context.Context, *PushMsgReq) (*PushMsgReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PushMsg not implemented")
+}
+func (UnimplementedCometServer) NewFriendShipApplyNotice(context.Context, *NewFriendShipApplyNoticeReq) (*NewFriendShipApplyNoticeReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewFriendShipApplyNotice not implemented")
+}
+func (UnimplementedCometServer) FriendShipApplyPassNotice(context.Context, *FriendShipApplyPassReq) (*FriendShipApplyPassReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FriendShipApplyPassNotice not implemented")
 }
 func (UnimplementedCometServer) mustEmbedUnimplementedCometServer() {}
 
@@ -84,6 +112,42 @@ func _Comet_PushMsg_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Comet_NewFriendShipApplyNotice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewFriendShipApplyNoticeReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CometServer).NewFriendShipApplyNotice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/maoim.comet.Comet/NewFriendShipApplyNotice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CometServer).NewFriendShipApplyNotice(ctx, req.(*NewFriendShipApplyNoticeReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Comet_FriendShipApplyPassNotice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FriendShipApplyPassReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CometServer).FriendShipApplyPassNotice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/maoim.comet.Comet/FriendShipApplyPassNotice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CometServer).FriendShipApplyPassNotice(ctx, req.(*FriendShipApplyPassReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Comet_ServiceDesc is the grpc.ServiceDesc for Comet service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -94,6 +158,14 @@ var Comet_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PushMsg",
 			Handler:    _Comet_PushMsg_Handler,
+		},
+		{
+			MethodName: "NewFriendShipApplyNotice",
+			Handler:    _Comet_NewFriendShipApplyNotice_Handler,
+		},
+		{
+			MethodName: "FriendShipApplyPassNotice",
+			Handler:    _Comet_FriendShipApplyPassNotice_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

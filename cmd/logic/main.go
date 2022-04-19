@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"maoim/internal/logic/wire"
-	comet2 "maoim/internal/pkg/grpc/comet"
+	"maoim/pkg/mysql"
 	"maoim/pkg/redis"
 )
 
@@ -21,15 +21,13 @@ func main() {
 	}
 	r := redis.New(c)
 
-	cometClient, err := comet2.NewCometGrpcClient()
-	if err != nil {
-		panic(err)
-	}
+	mysqlConfig := mysql.Default()
+	mysqlConfig.DbName = "maoim"
 
-	server := wire.Init(r, gin.Default(), cometClient)
+	m := mysql.New(mysqlConfig)
+	server := wire.Init(r, m, gin.Default())
 	if err := server.Start(); err != nil {
 		server.Stop()
 		log.Println(err)
 	}
 }
-

@@ -4,31 +4,31 @@ import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"log"
-	grpc2 "maoim/internal/logic/message/grpc"
 	"maoim/internal/logic/user"
 )
 
 type Api struct {
-	srv Service
+	srv  Service
 	grpc *grpc.Server
 }
 
 func NewApi(srv Service, g *gin.Engine) *Api {
 	a := &Api{
-		srv: srv,
-		grpc: grpc2.NewMessageGrpcServer(srv),
+		srv:  srv,
+		grpc: NewMessageGrpcServer(srv),
 	}
 	a.InitRouter(g)
 	return a
 }
 
-func (a *Api) PushMsg(c *gin.Context)  {
+func (a *Api) PushMsg(c *gin.Context) {
 	var (
 		arg struct {
-			Key string `json:"key"`
-			Op   int32    `json:"op"`
-			Seq  int32    `json:"seq"`
-			Body string   `json:"body"`
+			UserId  string `json:"user_id"`
+			Username  string `json:"username"`
+			Op   int32  `json:"op"`
+			Seq  int32  `json:"seq"`
+			Body string `json:"body"`
 		}
 	)
 	err := c.BindJSON(&arg)
@@ -47,11 +47,11 @@ func (a *Api) PushMsg(c *gin.Context)  {
 	us, _ := u.(*user.User)
 
 	err = a.srv.PushMsg(&PushMsgBo{
-		Key: arg.Key,
-		Op: arg.Op,
-		Seq: arg.Seq,
+		Key:  arg.UserId,
+		Op:   arg.Op,
+		Seq:  arg.Seq,
 		Body: arg.Body,
-		u: us,
+		u:    us,
 	})
 	if err != nil {
 		log.Println(arg)

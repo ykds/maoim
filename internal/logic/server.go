@@ -9,8 +9,8 @@ import (
 )
 
 type Server struct {
-	g     *gin.Engine
-	srv   *http.Server
+	g       *gin.Engine
+	srv     *http.Server
 	messApi *message.Api
 	userApi *user2.Api
 }
@@ -22,13 +22,11 @@ func New(messApi *message.Api, userApi *user2.Api, g *gin.Engine) *Server {
 	}
 
 	s := &Server{
-		g:     g,
-		srv:   server,
+		g:       g,
+		srv:     server,
 		messApi: messApi,
 		userApi: userApi,
 	}
-	messApi.InitRouter(g)
-	userApi.InitRouter(g)
 	return s
 }
 
