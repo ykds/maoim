@@ -5,7 +5,7 @@ import (
 	perr "github.com/pkg/errors"
 )
 
-var errorMap map[int32]*Error
+var errorMap = make(map[int32]*Error)
 
 
 type Error struct {

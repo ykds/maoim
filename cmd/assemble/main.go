@@ -7,6 +7,7 @@ import (
 	"log"
 	"maoim/internal/comet"
 	"maoim/internal/comet/grpc"
+	"maoim/internal/logic/conf"
 	"maoim/internal/logic/wire"
 	"maoim/pkg/mysql"
 	"maoim/pkg/redis"
@@ -21,15 +22,13 @@ import (
 var filepath string
 
 func main() {
-	flag.StringVar(&filepath, "config file path", "config.json", "config file path")
+	flag.StringVar(&filepath, "config file path", "config.yaml", "config file path")
 	flag.Parse()
 	rand.Seed(time.Now().UnixNano())
 
-	c, err := redis.Load(filepath)
-	if err != nil {
-		panic(err)
-	}
-	r := redis.New(c)
+	config := conf.Load(filepath)
+	r := redis.New(config.Redis)
+	m := mysql.New(config.Mysql)
 
 	done := make(chan struct{})
 	sig := make(chan os.Signal)
@@ -48,7 +47,7 @@ func main() {
 	}()
 
 	time.Sleep(time.Second)
-	go initlogic(r, engine)
+	go initlogic(config, m, r, engine)
 	go initcomet(r, done, engine)
 
 	<-sig
@@ -67,12 +66,8 @@ func initcomet(r *redis.Redis, done <-chan struct{}, g *gin.Engine) {
 	grpcServer.GracefulStop()
 }
 
-func initlogic(r *redis.Redis, g *gin.Engine) {
-	mysqlConfig := mysql.Default()
-	mysqlConfig.DbName = "maoim"
-	m := mysql.New(mysqlConfig)
-
-	server := wire.Init(r, m, g)
+func initlogic(c *conf.Config, m *mysql.Mysql, r *redis.Redis, g *gin.Engine) {
+	server := wire.Init(c, r, m, g)
 	if err := server.Start(); err != nil {
 		server.Stop()
 		log.Println(err)

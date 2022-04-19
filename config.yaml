@@ -1,7 +1,14 @@
 mysql:
-  host: 127.0.0.1
+  host: 120.77.10.139
   port: 3306
   username: root
-  password: teamoyk814
+  password: 123456
   db_name: maoim
 
+redis:
+  host: 120.77.10.139
+  port: 6379
+  db: 0
+
+logic:
+  port: 8001

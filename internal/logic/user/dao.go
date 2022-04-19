@@ -58,24 +58,24 @@ func (d *dao) SaveUser(u *User) error {
 
 // GetUser 获取用户
 func (d *dao) GetUser(userId string) (u *User, err error) {
-	err = d.db.Query().Where("user_id = ?", userId).First(&u).Error
+	err = d.db.GetDB().Where("id = ?", userId).First(&u).Error
 	return
 }
 
 // BatchGetUser 批量获取用户
 func (d *dao) BatchGetUser(userIds []string) (u []*User, err error) {
-	err = d.db.Query().Where("user_id in ?", userIds).Find(&u).Error
+	err = d.db.GetDB().Where("id in ?", userIds).Find(&u).Error
 	return
 }
 
 func (d *dao) GetUserByUsername(username string) (u *User, err error) {
-	err = d.db.Query().Where("username = ?", username).First(&u).Error
+	err = d.db.GetDB().Where("username = ?", username).First(&u).Error
 	return
 }
 
 // DeleteUser 删除用户
 func (d *dao) DeleteUser(userId string) error {
-	return d.db.GetDB().Delete("user_id = ?", userId).Error
+	return d.db.GetDB().Delete("id = ?", userId).Error
 }
 
 // Friend Module
@@ -91,14 +91,14 @@ func (d *dao) RemoveFriend(userId, otherUserId string) error {
 
 // GetFriendList 获取好友列表
 func (d *dao) GetFriendList(userId string) (fs []*FriendShip, err error) {
-	err = d.db.Query().Where("user_id = ?", userId).Find(&fs).Error
+	err = d.db.GetDB().Where("user_id = ?", userId).Find(&fs).Error
 	return
 }
 
 // IsFriend 查询是否好友关系
 func (d *dao) IsFriend(userId, friendId string) (bool, error) {
 	var count int64
-	err := d.db.Query().Model(&FriendShip{}).Where("user_id = ? AND f_user_id = ?", userId, friendId).Count(&count).Error
+	err := d.db.GetDB().Model(&FriendShip{}).Where("user_id = ? AND f_user_id = ?", userId, friendId).Count(&count).Error
 	return count > 0, err
 }
 
@@ -110,7 +110,7 @@ func (d *dao) GetApplyRecord(recordId string) (f *FriendShipApply, err error) {
 }
 
 func (d *dao) GetApplyRecordByUserId(userId, otherUserId string) (f *FriendShipApply, err error) {
-	err = d.db.Query().Where("user_id = ? AND other_user_id = ?", userId, otherUserId).First(&f).Error
+	err = d.db.GetDB().Where("user_id = ? AND other_user_id = ?", userId, otherUserId).First(&f).Error
 	return
 }
 
@@ -123,7 +123,7 @@ func (d *dao) ListApplyRecord(userId string, applying bool) (fsaList []*FriendSh
 	} else {
 		who = "other_user_id"
 	}
-	err = d.db.Query().Where(fmt.Sprintf(sqlTxt, who), userId, time.Now().Add(m)).Find(&fsaList).Error
+	err = d.db.GetDB().Where(fmt.Sprintf(sqlTxt, who), userId, time.Now().Add(m)).Find(&fsaList).Error
 	return
 }
 
@@ -136,7 +136,7 @@ func (d *dao) ListOffsetApplyRecord(userId, recordId string, applying bool) (fsa
 	} else {
 		who = "other_user_id"
 	}
-	err = d.db.Query().Where(fmt.Sprintf(sqlTxt, who), userId, time.Now().Add(m), recordId).Find(&fsaList).Error
+	err = d.db.GetDB().Where(fmt.Sprintf(sqlTxt, who), userId, time.Now().Add(m), recordId).Find(&fsaList).Error
 	return
 }
 

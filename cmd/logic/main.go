@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/gin-gonic/gin"
 	"log"
+	"maoim/internal/logic/conf"
 	"maoim/internal/logic/wire"
 	"maoim/pkg/mysql"
 	"maoim/pkg/redis"
@@ -12,20 +13,13 @@ import (
 var filepath string
 
 func main() {
-	flag.StringVar(&filepath, "config file path", "config.json", "config file path")
+	flag.StringVar(&filepath, "config file path", "config.yaml", "config file path")
 	flag.Parse()
 
-	c, err := redis.Load(filepath)
-	if err != nil {
-		panic(err)
-	}
-	r := redis.New(c)
-
-	mysqlConfig := mysql.Default()
-	mysqlConfig.DbName = "maoim"
-
-	m := mysql.New(mysqlConfig)
-	server := wire.Init(r, m, gin.Default())
+	config := conf.Load(filepath)
+	r := redis.New(config.Redis)
+	m := mysql.New(config.Mysql)
+	server := wire.Init(config, r, m, gin.Default())
 	if err := server.Start(); err != nil {
 		server.Stop()
 		log.Println(err)

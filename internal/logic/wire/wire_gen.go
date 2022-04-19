@@ -9,6 +9,7 @@ package wire
 import (
 	"github.com/gin-gonic/gin"
 	"maoim/internal/logic"
+	"maoim/internal/logic/conf"
 	"maoim/internal/logic/message"
 	"maoim/internal/logic/user"
 	"maoim/internal/pkg/grpc/comet"
@@ -18,7 +19,7 @@ import (
 
 // Injectors from wire.go:
 
-func Init(rdb *redis.Redis, db *mysql.Mysql, g *gin.Engine) *logic.Server {
+func Init(c *conf.Config, rdb *redis.Redis, db *mysql.Mysql, g *gin.Engine) *logic.Server {
 	cometClient := comet.NewCometGrpcClient()
 	dao := message.NewDao(cometClient, db)
 	userDao := user.NewDao(rdb, db)
@@ -26,6 +27,6 @@ func Init(rdb *redis.Redis, db *mysql.Mysql, g *gin.Engine) *logic.Server {
 	messageService := message.NewService(dao, service)
 	api := message.NewApi(messageService, g)
 	userApi := user.NewApi(service, g)
-	server := logic.New(api, userApi, g)
+	server := logic.New(c, api, userApi, g)
 	return server
 }

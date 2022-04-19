@@ -163,13 +163,11 @@ type ApplyRecord struct {
 }
 
 func (a *Api) ListApplyRecord(c *gin.Context) {
-	userId := c.Query("userId")
-	if userId == "" {
-		resp.Response(c, http.StatusBadRequest, "参数错误", nil)
-		return
-	}
+	get, _ := c.Get("user")
+	u := get.(*User)
+
 	applying := c.Query("applying") == "1"
-	record, err := a.srv.ListApplyRecord(userId, applying)
+	record, err := a.srv.ListApplyRecord(u.ID, applying)
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -190,15 +188,17 @@ func (a *Api) ListApplyRecord(c *gin.Context) {
 }
 
 func (a *Api) ListOffsetApplyRecord(c *gin.Context) {
-	userId := c.Query("userId")
+	get, _ := c.Get("user")
+	u := get.(*User)
+
 	recordId := c.Query("recordId")
-	if userId == "" || recordId == ""{
+	if recordId == "" {
 		resp.Response(c, http.StatusBadRequest, "参数错误", nil)
 		return
 	}
 
 	applying := c.Query("applying")
-	record, err := a.srv.ListOffsetApplyRecord(userId, recordId, applying == "1")
+	record, err := a.srv.ListOffsetApplyRecord(u.ID, recordId, applying == "1")
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return

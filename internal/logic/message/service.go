@@ -2,6 +2,7 @@ package message
 
 import (
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
 	pb "maoim/api/comet"
 	"maoim/api/protocal"
@@ -91,6 +92,7 @@ func (s *service) canPush(userId, friendId, msg string) (bool, error) {
 		ContentType:   Text,
 	})
 	if err != nil {
+		fmt.Println(err)
 		return false, err
 	}
 	return true, nil

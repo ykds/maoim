@@ -37,7 +37,7 @@ type dao struct {
 
 func (d *dao) ListUnReadMsg(userId string) ([]*PullMsgDo, error) {
 	mis := make([]MessageIndex, 0)
-	err := d.db.GetDB().Where("user_id = ? and box = 1 and read = 0", userId).Find(&mis).Error
+	err := d.db.GetDB().Where("user_id = ? AND box = 1 AND is_read = 0", userId).Find(&mis).Error
 	if err != nil {
 		return nil, err
 	}
@@ -61,19 +61,11 @@ func (d *dao) ListUnReadMsg(userId string) ([]*PullMsgDo, error) {
 
 func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
 	return d.db.GetDB().Transaction(func(tx *gorm.DB) (err error) {
-		defer func() {
-			if err != nil {
-				tx.Rollback()
-			} else {
-				tx.Commit()
-			}
-		}()
-
 		mc := MessageContent{
 			Content:     do.Content,
 			ContentType: do.ContentType,
 		}
-		err = d.db.GetDB().Create(&mc).Error
+		err = tx.Create(&mc).Error
 		if err != nil {
 			return
 		}
@@ -82,7 +74,7 @@ func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
 			UserId:          do.SendUserId,
 			OtherSideUserId: do.ReceiveUserId,
 			Box:             0,
-			Read:            1,
+			IsRead:            1,
 			MsgId:           mc.ID,
 		}
 		rMi := MessageIndex{
@@ -102,7 +94,7 @@ func (d *dao) PushMsg(ctx context.Context, req *cpb.PushMsgReq) error {
 }
 
 func (d *dao) AckMsg(userId string, msgId []string) error {
-	return d.db.GetDB().Model(&MessageIndex{}).Where("user_id = ? AND box = 1 AND msg_id in ?", userId, msgId).Update("read", 1).Error
+	return d.db.GetDB().Model(&MessageIndex{}).Where("user_id = ? AND box = 1 AND msg_id in ?", userId, msgId).Update("is_read", 1).Error
 }
 
 func NewDao(cometClient cpb.CometClient, db *mysql.Mysql) Dao {

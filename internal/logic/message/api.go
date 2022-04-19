@@ -25,7 +25,6 @@ func (a *Api) PushMsg(c *gin.Context) {
 	var (
 		arg struct {
 			UserId  string `json:"user_id"`
-			Username  string `json:"username"`
 			Op   int32  `json:"op"`
 			Seq  int32  `json:"seq"`
 			Body string `json:"body"`
