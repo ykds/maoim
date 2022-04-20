@@ -25,10 +25,10 @@ func NewApi(srv Service, g *gin.Engine) *Api {
 func (a *Api) PushMsg(c *gin.Context) {
 	var (
 		arg struct {
-			UserId  string `json:"user_id"`
-			Op   int32  `json:"op"`
-			Seq  int32  `json:"seq"`
-			Body string `json:"body"`
+			UserId string `json:"user_id"`
+			Op     int32  `json:"op"`
+			Seq    int32  `json:"seq"`
+			Body   string `json:"body"`
 		}
 	)
 	err := c.BindJSON(&arg)
@@ -64,4 +64,9 @@ func (a *Api) PullMsg(c *gin.Context) {
 		return
 	}
 	resp.SuccessResponse(c, msg)
+}
+
+func (a *Api) Shutdown() error {
+	a.grpc.GracefulStop()
+	return nil
 }

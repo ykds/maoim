@@ -10,7 +10,7 @@ import (
 )
 
 type Server struct {
-	c *conf.Config
+	c       *conf.Config
 	g       *gin.Engine
 	srv     *http.Server
 	messApi *message.Api
@@ -24,7 +24,7 @@ func New(c *conf.Config, messApi *message.Api, userApi *user2.Api, g *gin.Engine
 	}
 
 	s := &Server{
-		c: c,
+		c:       c,
 		g:       g,
 		srv:     server,
 		messApi: messApi,
@@ -39,5 +39,7 @@ func (s *Server) Start() error {
 
 func (s *Server) Stop() error {
 	s.srv.Shutdown(context.Background())
-	return s.userApi.Shutdown()
+	s.userApi.Shutdown()
+	s.messApi.Shutdown()
+	return nil
 }

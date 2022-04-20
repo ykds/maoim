@@ -30,7 +30,6 @@ func main() {
 	r := redis.New(config.Redis)
 	m := mysql.New(config.Mysql)
 
-	done := make(chan struct{})
 	sig := make(chan os.Signal)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL)
 
@@ -47,29 +46,37 @@ func main() {
 	}()
 
 	time.Sleep(time.Second)
-	go initlogic(config, m, r, engine)
-	go initcomet(r, done, engine)
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	go initlogic(ctx, config, m, r, engine)
+	go initcomet(ctx, r, engine)
 
 	<-sig
+	cancelFunc()
 	httpServer.Shutdown(context.Background())
-	close(done)
 }
 
-func initcomet(r *redis.Redis, done <-chan struct{}, g *gin.Engine) {
+func initcomet(ctx context.Context, r *redis.Redis, g *gin.Engine) {
 	s := comet.NewServer(r)
 	grpcServer := grpc.New(s)
 
 	g.GET("/", s.WsHandler)
 
-	<-done
+	<-ctx.Done()
 
 	grpcServer.GracefulStop()
 }
 
-func initlogic(c *conf.Config, m *mysql.Mysql, r *redis.Redis, g *gin.Engine) {
+func initlogic(ctx context.Context, c *conf.Config, m *mysql.Mysql, r *redis.Redis, g *gin.Engine) {
 	server := wire.Init(c, r, m, g)
-	if err := server.Start(); err != nil {
-		server.Stop()
-		log.Println(err)
-	}
+	go func() {
+		if err := server.Start(); err != nil {
+			log.Println(err)
+		}
+	}()
+
+	<-ctx.Done()
+
+	server.Stop()
 }
