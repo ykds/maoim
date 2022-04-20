@@ -10,7 +10,7 @@ func Response(c *gin.Context, status int, msg string, data interface{}) {
 	if data != nil {
 		body["data"] = data
 	}
-	c.JSON(status, body)
+	c.JSON(http.StatusOK, body)
 }
 
 func SuccessResponse(c *gin.Context, data interface{}) {

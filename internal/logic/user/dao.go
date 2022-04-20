@@ -2,6 +2,8 @@ package user
 
 import (
 	"fmt"
+	"gorm.io/gorm"
+	"maoim/pkg/merror"
 	"maoim/pkg/mysql"
 	"maoim/pkg/redis"
 	"time"
@@ -53,7 +55,11 @@ func NewDao(rdb *redis.Redis, db *mysql.Mysql) Dao {
 // User Module
 // SaveUser 新增用户
 func (d *dao) SaveUser(u *User) error {
-	return d.db.GetDB().Create(u).Error
+	err := d.db.GetDB().Create(u).Error
+	if err != nil {
+		err = merror.Wrap(err, "新增用户失败")
+	}
+	return err
 }
 
 // GetUser 获取用户
@@ -70,6 +76,9 @@ func (d *dao) BatchGetUser(userIds []string) (u []*User, err error) {
 
 func (d *dao) GetUserByUsername(username string) (u *User, err error) {
 	err = d.db.GetDB().Where("username = ?", username).First(&u).Error
+	if err != nil {
+		err = merror.Wrap(err, "根据用户名查询用户失败")
+	}
 	return
 }
 
@@ -86,8 +95,17 @@ func (d *dao) AddFriend(userId, otherUserId string) error {
 
 // RemoveFriend 删除好友
 func (d *dao) RemoveFriend(userId, otherUserId string) error {
-	return d.db.GetDB().Delete("user_id = ? AND f_user_id = ?", userId, otherUserId).Error
+	return d.db.GetDB().Transaction(func(tx *gorm.DB) error {
+		if err := tx.Delete("user_id = ? AND f_user_id = ?", userId, otherUserId).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete("user_id = ? AND f_user_id = ?", otherUserId, userId).Error; err != nil {
+			return err
+		}
+		return nil
+	})
 }
+
 
 // GetFriendList 获取好友列表
 func (d *dao) GetFriendList(userId string) (fs []*FriendShip, err error) {

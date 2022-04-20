@@ -29,20 +29,24 @@ func (a *Api) Register(c *gin.Context) {
 			Username string `json:"username"`
 			Password string `json:"password"`
 		}
+		res struct {
+			UserId string `json:"user_id"`
+		}
 	)
 
 	err := c.ShouldBind(&arg)
 	if err != nil || arg.Username == "" || arg.Password == "" {
-		c.JSON(200, gin.H{"code": 400, "message": "username或password为空"})
+		resp.Response(c, http.StatusBadRequest, "username或password为空", nil)
 		return
 	}
 
 	u, err := a.srv.Register(arg.Username, arg.Password)
 	if err != nil {
-		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
-	c.JSON(200, gin.H{"code": 200, "message": "register success", "data": u.ID})
+	res.UserId = u.ID
+	resp.SuccessResponse(c, res)
 }
 
 func (a *Api) Login(c *gin.Context) {
@@ -55,46 +59,46 @@ func (a *Api) Login(c *gin.Context) {
 
 	err := c.ShouldBind(&arg)
 	if err != nil || arg.UserId == "" || arg.Password == "" {
-		c.JSON(200, gin.H{"code": 400, "message": "user_id或password为空"})
+		resp.Response(c, http.StatusBadRequest,  "user_id或password为空", nil)
 		return
 	}
 
 	token, err := a.srv.Login(arg.UserId, arg.Password)
 	if err != nil {
-		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
+		resp.Response(c, http.StatusInternalServerError,  err.Error(), nil)
 		return
 	}
-	c.JSON(200, gin.H{"code": 200, "message": "success", "data": token})
+	resp.SuccessResponse(c, token)
 }
 
-func (a *Api) AddFriend(c *gin.Context) {
-	var (
-		arg struct {
-			Friendname string `json:"friendname"`
-		}
-	)
-
-	user, _ := c.Get("user")
-	u := user.(*User)
-
-	err := c.ShouldBind(&arg)
-	if err != nil || arg.Friendname == "" {
-		c.JSON(200, gin.H{"code": 400, "message": "Friendname为空"})
-		return
-	}
-
-	err = a.srv.AddFriend(u.Username, arg.Friendname)
-	if err != nil {
-		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
-		return
-	}
-	c.JSON(200, gin.H{"code": 200, "message": "success"})
-}
+//func (a *Api) AddFriend(c *gin.Context) {
+//	var (
+//		arg struct {
+//			Friendname string `json:"friendname"`
+//		}
+//	)
+//
+//	user, _ := c.Get("user")
+//	u := user.(*User)
+//
+//	err := c.ShouldBind(&arg)
+//	if err != nil || arg.Friendname == "" {
+//		c.JSON(200, gin.H{"code": 400, "message": "Friendname为空"})
+//		return
+//	}
+//
+//	err = a.srv.AddFriend(u.Username, arg.Friendname)
+//	if err != nil {
+//		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
+//		return
+//	}
+//	c.JSON(200, gin.H{"code": 200, "message": "success"})
+//}
 
 func (a *Api) DeleteFriend(c *gin.Context) {
 	var (
 		arg struct {
-			FriendName string `json:"friendname"`
+			FUserId string `json:"f_user_id"`
 		}
 	)
 
@@ -102,12 +106,12 @@ func (a *Api) DeleteFriend(c *gin.Context) {
 	u := user.(*User)
 
 	err := c.ShouldBind(&arg)
-	if err != nil || arg.FriendName == "" {
-		resp.Response(c, http.StatusBadRequest, "friendname为空", nil)
+	if err != nil || arg.FUserId == "" {
+		resp.Response(c, http.StatusBadRequest, "f_user_id为空", nil)
 		return
 	}
 
-	err = a.srv.RemoveFriend(u.Username, arg.FriendName)
+	err = a.srv.RemoveFriend(u.ID, arg.FUserId)
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -118,7 +122,7 @@ func (a *Api) DeleteFriend(c *gin.Context) {
 func (a *Api) GetFriends(c *gin.Context) {
 	user, _ := c.Get("user")
 	u := user.(*User)
-	friends, err := a.srv.GetFriends(u.Username)
+	friends, err := a.srv.GetFriends(u.ID)
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -191,7 +195,7 @@ func (a *Api) ListOffsetApplyRecord(c *gin.Context) {
 	get, _ := c.Get("user")
 	u := get.(*User)
 
-	recordId := c.Query("recordId")
+	recordId := c.Query("record_id")
 	if recordId == "" {
 		resp.Response(c, http.StatusBadRequest, "参数错误", nil)
 		return

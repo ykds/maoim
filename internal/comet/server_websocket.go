@@ -100,6 +100,10 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user2.User) {
 	}
 }
 
+type AckReq struct {
+	MsgIdList []string `json:"msg_id_list"`
+}
+
 func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
 	var lastHB = time.Now()
 	for {
@@ -115,8 +119,8 @@ func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
 				lastHB = now
 			}
 		} else if p.Op == protocal.OpAck {
-			msgIds := make([]string, 0)
-			err = json.Unmarshal(p.Body, &msgIds)
+			ackReq := &AckReq{}
+			err = json.Unmarshal(p.Body, ackReq)
 			if err != nil {
 				fmt.Println(err)
 				_ = ch.Push(&protocal.Proto{
@@ -125,9 +129,12 @@ func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
 				})
 				continue
 			}
+			if len(ackReq.MsgIdList) == 0 {
+				continue
+			}
 			_, err := s.messageClient.AckMsg(context.Background(), &mpb.AckReq{
 				UserId:   ch.Key,
-				MsgId:    msgIds,
+				MsgId:    ackReq.MsgIdList,
 			})
 			if err != nil {
 				fmt.Println(err)

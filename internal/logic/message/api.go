@@ -3,8 +3,9 @@ package message
 import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
-	"log"
 	"maoim/internal/logic/user"
+	"maoim/internal/pkg/resp"
+	"net/http"
 )
 
 type Api struct {
@@ -32,18 +33,12 @@ func (a *Api) PushMsg(c *gin.Context) {
 	)
 	err := c.BindJSON(&arg)
 	if err != nil {
-		log.Println(arg)
-		c.JSON(400, gin.H{"code": 400, "message": "参数格式错误"})
+		resp.Response(c, http.StatusBadRequest, "参数格式错误", nil)
 		return
 	}
 
-	u, exists := c.Get("user")
-	if !exists {
-		log.Println(arg)
-		c.JSON(401, gin.H{"code": 401, "message": "no auth"})
-		return
-	}
-	us, _ := u.(*user.User)
+	u, _ := c.Get("user")
+	us := u.(*user.User)
 
 	err = a.srv.PushMsg(&PushMsgBo{
 		Key:  arg.UserId,
@@ -53,26 +48,20 @@ func (a *Api) PushMsg(c *gin.Context) {
 		u:    us,
 	})
 	if err != nil {
-		log.Println(arg)
-		c.JSON(500, gin.H{"code": 500, "message": err.Error()})
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
-	c.JSON(200, gin.H{"code": 200, "message": "success"})
+	resp.SuccessResponse(c, nil)
 }
 
 func (a *Api) PullMsg(c *gin.Context) {
-	u, exists := c.Get("user")
-	if !exists {
-		c.JSON(401, gin.H{"code": 401, "message": "no auth"})
-		return
-	}
+	u, _ := c.Get("user")
 	us, _ := u.(*user.User)
 
 	msg, err := a.srv.PullMsg(us.ID)
 	if err != nil {
-		c.JSON(500, gin.H{"code": 500, "message": err.Error()})
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
-
-	c.JSON(200, gin.H{"code": 200, "message": "success", "data": msg})
+	resp.SuccessResponse(c, msg)
 }

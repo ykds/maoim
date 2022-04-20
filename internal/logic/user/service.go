@@ -14,6 +14,8 @@ import (
 type UserVo struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
+	Nickname string `json:"nickname"`
+	Avatar string `json:"avatar"`
 }
 
 var _ Service = &service{}
@@ -57,12 +59,11 @@ func (s *service) Register(username, password string) (u *User, err error) {
 	_, err = s.dao.GetUserByUsername(username)
 	// err = nil 时，说明没有报找不到err或其它err
 	if err == nil {
-		err = HasRegisterErr
+		err = merror.WithMessage(err, HasRegisterErr.Error())
 		return
 	}
 	// 查询 db 报其它err
 	if err != gorm.ErrRecordNotFound{
-		err = merror.WithMessage(err, "注册用户失败")
 		return
 	}
 
@@ -184,7 +185,6 @@ func (s *service) RemoveFriend(userId, otherUserId string) error {
 	if !ok {
 		return fmt.Errorf("无此好友")
 	}
-
 	return s.dao.RemoveFriend(userId, otherUserId)
 }
 
@@ -206,6 +206,8 @@ func (s *service) GetFriends(userId string) (vos []*UserVo, err error) {
 		vos = append(vos, &UserVo{
 			ID: u.ID,
 			Username: u.Username,
+			Nickname: u.Nickname,
+			Avatar: u.Avatar,
 		})
 	}
 	return

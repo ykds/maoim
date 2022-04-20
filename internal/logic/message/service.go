@@ -2,11 +2,13 @@ package message
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	pb "maoim/api/comet"
 	"maoim/api/protocal"
 	"maoim/internal/logic/user"
+	"time"
 )
 
 const (
@@ -25,6 +27,7 @@ type PushMsgBo struct {
 
 type PullMsgBo struct {
 	SendUserId  string `json:"send_user_id"`
+	SendUsername  string `json:"send_user_name"`
 	MsgId       string `json:"msg_id"`
 	Content     string `json:"content"`
 	ContentType int8   `json:"content_type"`
@@ -50,11 +53,16 @@ func (s *service) PullMsg(userId string) ([]*PullMsgBo, error) {
 	}
 	result := make([]*PullMsgBo, 0, len(unReadMsg))
 	for _, msg := range unReadMsg {
+		u, err := s.userSrv.GetUser(msg.SendUserId)
+		if err != nil {
+			return nil, err
+		}
 		result = append(result, &PullMsgBo{
 			SendUserId:  msg.SendUserId,
+			SendUsername:  u.Username,
 			MsgId:       msg.MsgId,
 			Content:     msg.Content,
-			ContentType: msg.ContentType,
+			//ContentType: msg.ContentType,
 		})
 	}
 	return result, nil
@@ -98,6 +106,13 @@ func (s *service) canPush(userId, friendId, msg string) (bool, error) {
 	return true, nil
 }
 
+type MsgBody struct {
+	SendUserId string `json:"send_user_id"`
+	SendUsername string `json:"send_username"`
+	Content string `json:"content"`
+	SendTime string `json:"send_time"`
+}
+
 func (s *service) PushMsg(bo *PushMsgBo) error {
 	ok, err := s.canPush(bo.u.ID, bo.Key, bo.Body)
 	if err != nil {
@@ -107,13 +122,24 @@ func (s *service) PushMsg(bo *PushMsgBo) error {
 	if !ok {
 		return nil
 	}
+	body := &MsgBody{
+		SendUserId: bo.u.ID,
+		SendUsername: bo.u.Username,
+		Content: bo.Body,
+		SendTime: time.Now().Format("2006-01-02 15:04:05"),
+	}
+
+	b, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
 
 	req := &pb.PushMsgReq{
 		Keys: []string{bo.Key},
 		Proto: &protocal.Proto{
 			Op:   bo.Op,
 			Seq:  bo.Seq,
-			Body: []byte(bo.Body),
+			Body: b,
 		},
 	}
 
