@@ -19,7 +19,6 @@ func (m *MessageIndex) TableName() string {
 
 type MessageContent struct {
 	mysql.BaseModel
-	MsgId       string `json:"content_id"`
 	Content     string `json:"content"`
 	ContentType int8   `json:"content_type"`
 }

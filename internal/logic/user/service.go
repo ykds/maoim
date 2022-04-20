@@ -28,7 +28,7 @@ type Service interface {
 	Auth(token string) (*User, error)
 
 	GetFriends(userId string) ([]*UserVo, error)
-	ApplyFriend(userId, otherUserId, remark string) error
+	ApplyFriend(userId, otherUsername, remark string) error
 	AddFriend(userId, otherUserId string) error
 	RemoveFriend(userId, otherUserId string) error
 	IsFriend(userId, friendId string) (bool, error)
@@ -78,8 +78,8 @@ func (s *service) Register(username, password string) (u *User, err error) {
 	return
 }
 
-func (s *service) Login(userId, password string) (str string, err error) {
-	u, err := s.dao.GetUser(userId)
+func (s *service) Login(username, password string) (str string, err error) {
+	u, err := s.dao.GetUserByUsername(username)
 	if err != nil {
 		err = LoginFailErr
 		return
@@ -113,8 +113,12 @@ func (s *service) Auth(token string) (u *User, err error) {
 }
 
 
-func (s *service) ApplyFriend(userId, otherUserId, remark string) error {
-	isFriend, err := s.IsFriend(userId, otherUserId)
+func (s *service) ApplyFriend(userId, otherUsername, remark string) error {
+	other, err := s.dao.GetUserByUsername(otherUsername)
+	if err != nil {
+		return err
+	}
+	isFriend, err := s.IsFriend(userId, other.ID)
 	if err != nil {
 		return err
 	}
@@ -122,7 +126,7 @@ func (s *service) ApplyFriend(userId, otherUserId, remark string) error {
 		return AlreadyFriendErr
 	}
 
-	record, err := s.dao.GetApplyRecordByUserId(userId, otherUserId)
+	record, err := s.dao.GetApplyRecordByUserId(userId, other.ID)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
@@ -130,13 +134,13 @@ func (s *service) ApplyFriend(userId, otherUserId, remark string) error {
 		return errors.New("重复申请")
 	}
 
-	err = s.dao.SaveApplyRecord(userId, otherUserId, remark)
+	err = s.dao.SaveApplyRecord(userId, other.ID, remark)
 	if err != nil {
 		return err
 	}
 
 	_, err = s.cometClient.NewFriendShipApplyNotice(context.Background(), &comet.NewFriendShipApplyNoticeReq{
-		UserId: otherUserId,
+		UserId: other.ID,
 	})
 	return err
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"maoim/internal/comet"
@@ -40,6 +41,7 @@ func main() {
 		Handler: engine,
 	}
 	go func() {
+		fmt.Println("run on " + config.Assemble.Port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}

@@ -6,6 +6,7 @@ import (
 	"maoim/api/comet"
 	"maoim/internal/pkg/resp"
 	"net/http"
+	"sort"
 )
 
 type Api struct {
@@ -52,18 +53,18 @@ func (a *Api) Register(c *gin.Context) {
 func (a *Api) Login(c *gin.Context) {
 	var (
 		arg struct {
-			UserId string `json:"user_id"`
+			Username string `json:"username"`
 			Password string `json:"password"`
 		}
 	)
 
 	err := c.ShouldBind(&arg)
-	if err != nil || arg.UserId == "" || arg.Password == "" {
-		resp.Response(c, http.StatusBadRequest,  "user_id或password为空", nil)
+	if err != nil || arg.Username == "" || arg.Password == "" {
+		resp.Response(c, http.StatusBadRequest,  "username或password为空", nil)
 		return
 	}
 
-	token, err := a.srv.Login(arg.UserId, arg.Password)
+	token, err := a.srv.Login(arg.Username, arg.Password)
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError,  err.Error(), nil)
 		return
@@ -137,8 +138,7 @@ func (a *Api) GetUserService() Service {
 func (a *Api) ApplyFriend(c *gin.Context) {
 	var (
 		arg struct {
-			UserId      string `json:"user_id"`
-			OtherUserId string `json:"other_user_id"`
+			OtherUsername string `json:"other_username"`
 			Remark      string `json:"remark"`
 		}
 	)
@@ -149,7 +149,10 @@ func (a *Api) ApplyFriend(c *gin.Context) {
 		return
 	}
 
-	err = a.srv.ApplyFriend(arg.UserId, arg.OtherUserId, arg.Remark)
+	get, _ := c.Get("user")
+	u := get.(*User)
+
+	err = a.srv.ApplyFriend(u.ID, arg.OtherUsername, arg.Remark)
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -164,21 +167,37 @@ type ApplyRecord struct {
 	AppliedUserId string `json:"applied_user_id"`
 	Remark string `json:"remark"`
 	ApplyTime string `json:"apply_time"`
+	ApplyType int `json:"apply_type"`
 }
 
 func (a *Api) ListApplyRecord(c *gin.Context) {
 	get, _ := c.Get("user")
 	u := get.(*User)
 
-	applying := c.Query("applying") == "1"
-	record, err := a.srv.ListApplyRecord(u.ID, applying)
+	applyingList, err := a.srv.ListApplyRecord(u.ID, true)
+	if err != nil {
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+	applyedList, err := a.srv.ListApplyRecord(u.ID, false)
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
+	record := make([]*FriendShipApply, 0)
+	record = append(record, applyingList...)
+	record = append(record, applyedList...)
+	sort.Slice(record, func(i, j int) bool {
+		return record[i].CreatedAt.After(record[j].CreatedAt)
+	})
+
 	result := make([]ApplyRecord, len(record))
 	for i, r := range record {
+		applyType := 0
+		if u.ID == r.OtherUserId {
+			applyType = 1
+		}
 		result[i] = ApplyRecord{
 			ID: r.ID,
 			ApplyUserId: r.UserId,
@@ -186,6 +205,7 @@ func (a *Api) ListApplyRecord(c *gin.Context) {
 			AppliedUserId: r.OtherUserId,
 			Remark: r.Remark,
 			ApplyTime: r.CreatedAt.Format("2006-01-02 15:04:05"),
+			ApplyType: applyType,
 		}
 	}
 	resp.SuccessResponse(c, result)
@@ -201,13 +221,39 @@ func (a *Api) ListOffsetApplyRecord(c *gin.Context) {
 		return
 	}
 
-	applying := c.Query("applying")
-	record, err := a.srv.ListOffsetApplyRecord(u.ID, recordId, applying == "1")
+	applyingList, err := a.srv.ListOffsetApplyRecord(u.ID, recordId, true)
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
-	resp.SuccessResponse(c, record)
+	applyedList, err := a.srv.ListOffsetApplyRecord(u.ID, recordId, false)
+	if err != nil {
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+	record := make([]*FriendShipApply, 0)
+	record = append(record, applyingList...)
+	record = append(record, applyedList...)
+	sort.Slice(record, func(i, j int) bool {
+		return record[i].CreatedAt.After(record[j].CreatedAt)
+	})
+	result := make([]ApplyRecord, len(record))
+	for i, r := range record {
+		applyType := 0
+		if u.ID == r.OtherUserId {
+			applyType = 1
+		}
+		result[i] = ApplyRecord{
+			ID: r.ID,
+			ApplyUserId: r.UserId,
+			ApplyUsername: r.Username,
+			AppliedUserId: r.OtherUserId,
+			Remark: r.Remark,
+			ApplyTime: r.CreatedAt.Format("2006-01-02 15:04:05"),
+			ApplyType: applyType,
+		}
+	}
+	resp.SuccessResponse(c, result)
 }
 
 func (a *Api) AgreeFriendShipApply(c *gin.Context) {

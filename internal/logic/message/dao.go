@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	cpb "maoim/api/comet"
 	"maoim/pkg/mysql"
+	"time"
 )
 
 var _ Dao = new(dao)
@@ -21,11 +22,12 @@ type PullMsgDo struct {
 	MsgId       string
 	Content     string
 	ContentType int8
+	SendTime time.Time
 }
 
 type Dao interface {
 	PushMsg(ctx context.Context, req *cpb.PushMsgReq) error
-	SaveMsg(ctx context.Context, do *SaveMsgDo) error
+	SaveMsg(ctx context.Context, do *SaveMsgDo) (string, error)
 	AckMsg(userId string, msgId []string) error
 	ListUnReadMsg(userId string) ([]*PullMsgDo, error)
 }
@@ -54,17 +56,20 @@ func (d *dao) ListUnReadMsg(userId string) ([]*PullMsgDo, error) {
 			MsgId:       mi.MsgId,
 			Content:     mc.Content,
 			ContentType: mc.ContentType,
+			SendTime: mc.CreatedAt,
 		})
 	}
 	return result, nil
 }
 
-func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
-	return d.db.GetDB().Transaction(func(tx *gorm.DB) (err error) {
+func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) (string, error) {
+	var msgId string
+	err := d.db.GetDB().Transaction(func(tx *gorm.DB) (err error) {
 		mc := MessageContent{
 			Content:     do.Content,
 			ContentType: do.ContentType,
 		}
+		msgId = mc.ID
 		err = tx.Create(&mc).Error
 		if err != nil {
 			return
@@ -86,6 +91,7 @@ func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) error {
 		mis := []MessageIndex{sMi, rMi}
 		return tx.Create(&mis).Error
 	})
+	return msgId, err
 }
 
 func (d *dao) PushMsg(ctx context.Context, req *cpb.PushMsgReq) error {

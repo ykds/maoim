@@ -37,8 +37,8 @@ type Service interface {
 	GetUserService() user.Service
 	PushMsg(bo *PushMsgBo) error
 	AckMsg(userId string, msgId []string) error
-	SaveMsg(do *SaveMsgDo) error
-	PullMsg(userId string) ([]*PullMsgBo, error)
+	SaveMsg(do *SaveMsgDo) (string, error)
+	PullMsg(userId string) ([]*MsgBody, error)
 }
 
 type service struct {
@@ -46,22 +46,23 @@ type service struct {
 	d       Dao
 }
 
-func (s *service) PullMsg(userId string) ([]*PullMsgBo, error) {
+func (s *service) PullMsg(userId string) ([]*MsgBody, error) {
 	unReadMsg, err := s.d.ListUnReadMsg(userId)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*PullMsgBo, 0, len(unReadMsg))
+	result := make([]*MsgBody, 0, len(unReadMsg))
 	for _, msg := range unReadMsg {
 		u, err := s.userSrv.GetUser(msg.SendUserId)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, &PullMsgBo{
+		result = append(result, &MsgBody{
 			SendUserId:  msg.SendUserId,
 			SendUsername:  u.Username,
 			MsgId:       msg.MsgId,
 			Content:     msg.Content,
+			SendTime: msg.SendTime.Format("2006-01-02 15:04:05"),
 			//ContentType: msg.ContentType,
 		})
 	}
@@ -79,7 +80,7 @@ func (s *service) GetUserService() user.Service {
 	return s.userSrv
 }
 
-func (s *service) SaveMsg(do *SaveMsgDo) error {
+func (s *service) SaveMsg(do *SaveMsgDo) (string, error) {
 	return s.d.SaveMsg(context.Background(), do)
 }
 
@@ -93,22 +94,13 @@ func (s *service) canPush(userId, friendId, msg string) (bool, error) {
 		return false, errors.New(friendId + "不是好友")
 	}
 
-	err = s.SaveMsg(&SaveMsgDo{
-		SendUserId:    userId,
-		ReceiveUserId: friendId,
-		Content:       msg,
-		ContentType:   Text,
-	})
-	if err != nil {
-		fmt.Println(err)
-		return false, err
-	}
 	return true, nil
 }
 
 type MsgBody struct {
 	SendUserId string `json:"send_user_id"`
 	SendUsername string `json:"send_username"`
+	MsgId string `json:"msg_id"`
 	Content string `json:"content"`
 	SendTime string `json:"send_time"`
 }
@@ -118,13 +110,25 @@ func (s *service) PushMsg(bo *PushMsgBo) error {
 	if err != nil {
 		return err
 	}
-
 	if !ok {
 		return nil
 	}
+
+	msgId, err := s.SaveMsg(&SaveMsgDo{
+		SendUserId:    bo.u.ID,
+		ReceiveUserId: bo.Key,
+		Content:       bo.Body,
+		ContentType:   Text,
+	})
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
 	body := &MsgBody{
 		SendUserId: bo.u.ID,
 		SendUsername: bo.u.Username,
+		MsgId: msgId,
 		Content: bo.Body,
 		SendTime: time.Now().Format("2006-01-02 15:04:05"),
 	}
