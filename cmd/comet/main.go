@@ -18,7 +18,7 @@ import (
 var filepath string
 
 func main() {
-	flag.StringVar(&filepath, "config file path", "config.yaml", "config file path")
+	flag.StringVar(&filepath, "config", "config.yaml", "config file path")
 	flag.Parse()
 
 	rand.Seed(time.Now().UnixNano())

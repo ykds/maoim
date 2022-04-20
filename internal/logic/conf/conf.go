@@ -7,12 +7,17 @@ import (
 )
 
 type Config struct {
-	Mysql *mysql.Config
-	Redis *redis.Config
-	Logic *Server
+	Mysql    *mysql.Config
+	Redis    *redis.Config
+	Logic    *Server
+	Assemble *AssembleServer
 }
 
 type Server struct {
+	Port string `json:"port" yaml:"port"`
+}
+
+type AssembleServer struct {
 	Port string `json:"port" yaml:"port"`
 }
 
