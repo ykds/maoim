@@ -27,6 +27,7 @@ type Service interface {
 	GetUser(userId string) (*User, error)
 	GetUserByUsername(username string) (*User, error)
 	Auth(token string) (*User, error)
+	UpdateUser(u *User) error
 
 	GetFriends(userId string) ([]*UserVo, error)
 	ApplyFriend(me *User, otherUsername, remark string) error
@@ -38,6 +39,7 @@ type Service interface {
 	ListApplyRecord(userId string, applying bool) ([]*FriendShipApply, error)
 	ListOffsetApplyRecord(userId, recordId string, applying bool) ([]*FriendShipApply, error)
 	AgreeFriendShipApply(userId, recordId string) error
+	BatchUpdateApplyRecord([]*FriendShipApply) error
 
 	Connect(userId string) error
 	Disconnect(userId string) error
@@ -47,10 +49,6 @@ type Service interface {
 type service struct {
 	dao         Dao
 	cometClient comet.CometClient
-}
-
-func (s *service) GetUserByUsername(username string) (*User, error) {
-	return s.dao.GetUserByUsername(username)
 }
 
 func NewService(d Dao, cometClient comet.CometClient) Service {
@@ -68,7 +66,7 @@ func (s *service) Register(username, password string) (u *User, err error) {
 		return
 	}
 	// 查询 db 报其它err
-	if err != gorm.ErrRecordNotFound {
+	if !merror.Is(err, gorm.ErrRecordNotFound) {
 		err = merror.WithMessage(err, RegisterErr.Error())
 		return
 	}
@@ -105,8 +103,16 @@ func (s *service) Logout(userId string) error {
 	return s.dao.DeleteUser(userId)
 }
 
+func (s *service) GetUserByUsername(username string) (*User, error) {
+	return s.dao.GetUserByUsername(username)
+}
+
 func (s *service) GetUser(userId string) (*User, error) {
 	return s.dao.GetUser(userId)
+}
+
+func (s *service) UpdateUser(u *User) error {
+	return s.dao.UpdateUser(u)
 }
 
 func (s *service) Auth(token string) (u *User, err error) {
@@ -270,6 +276,10 @@ func (s service) AgreeFriendShipApply(userId, recordId string) error {
 		UserId: record.UserId,
 	})
 	return err
+}
+
+func (s *service) BatchUpdateApplyRecord(records []*FriendShipApply) error {
+	return s.dao.BatchUpdateApplyRecord(records)
 }
 
 func (s *service) Disconnect(userId string) error {

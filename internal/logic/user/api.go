@@ -7,8 +7,11 @@ import (
 	"maoim/api/comet"
 	"maoim/internal/pkg/resp"
 	"maoim/pkg/logger"
+	"maoim/pkg/merror"
 	"net/http"
+	"path"
 	"sort"
+	"time"
 )
 
 type ApplyDetailStatus int
@@ -19,13 +22,19 @@ const (
 	WAIT_AGREE
 )
 
+type UpdateUserInfoReq struct {
+	Nickname string `json:"nickname"`
+	Mobile   string `json:"mobile"`
+	Avatar   string `json:"avatar"`
+}
+
 type UserInfoVo struct {
 	ID       string            `json:"id"`
 	Username string            `json:"username"`
 	Nickname string            `json:"nickname"`
 	Mobile   string            `json:"mobile"`
 	Avatar   string            `json:"avatar"`
-	Status   ApplyDetailStatus `json:"status"`
+	Status   ApplyDetailStatus `json:"status;omitempty"`
 }
 
 type Api struct {
@@ -41,6 +50,22 @@ func NewApi(srv Service, g *gin.Engine) *Api {
 	}
 	a.InitRouter(g)
 	return a
+}
+
+func (a *Api) UploadFile(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		resp.Response(c, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+	savePath := path.Join("./static/" + file.Filename)
+	err = c.SaveUploadedFile(file, savePath)
+	if err != nil {
+		logger.Error(err.Error())
+		resp.Response(c, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+	resp.SuccessResponse(c, "/static/"+file.Filename)
 }
 
 func (a *Api) Register(c *gin.Context) {
@@ -91,6 +116,56 @@ func (a *Api) Login(c *gin.Context) {
 	resp.SuccessResponse(c, token)
 }
 
+func (a *Api) MineInfo(c *gin.Context) {
+	authUser, _ := c.Get("user")
+	u := authUser.(*User)
+
+	user, err := a.srv.GetUser(u.ID)
+	if err != nil {
+		logger.Error(err.Error())
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	userInfoVo := &UserInfoVo{
+		ID:       user.ID,
+		Username: user.Username,
+		Nickname: user.Nickname,
+		Mobile:   user.Mobile,
+		Avatar:   user.Avatar,
+	}
+	resp.SuccessResponse(c, userInfoVo)
+}
+
+func (a *Api) UpdateMineInfo(c *gin.Context) {
+	req := UpdateUserInfoReq{}
+	err := c.BindJSON(&req)
+	if err != nil {
+		resp.Response(c, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	authUser, _ := c.Get("user")
+	u := authUser.(*User)
+
+	if req.Mobile != "" {
+		u.Mobile = req.Mobile
+	}
+	if req.Nickname != "" {
+		u.Nickname = req.Nickname
+	}
+	if req.Avatar != "" {
+		u.Avatar = req.Avatar
+	}
+	err = a.srv.UpdateUser(u)
+	if err != nil {
+		logger.Error(err.Error())
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+	resp.SuccessResponse(c, nil)
+}
+
 func (a *Api) GetUserInfo(c *gin.Context) {
 	username := c.Query("username")
 	if username == "" {
@@ -132,7 +207,7 @@ func (a *Api) GetUserInfo(c *gin.Context) {
 				userInfoVo.Status = WAIT_AGREE
 			}
 		} else {
-			if err == gorm.ErrRecordNotFound {
+			if merror.Is(err, gorm.ErrRecordNotFound) {
 				userInfoVo.Status = STRANGER
 			} else {
 				logger.Error(err.Error())
@@ -210,13 +285,14 @@ func (a *Api) ApplyFriend(c *gin.Context) {
 }
 
 type ApplyRecord struct {
-	ID            string `json:"id"`
-	ApplyUserId   string `json:"apply_user_id"`
-	ApplyUsername string `json:"apply_username"`
-	AppliedUserId string `json:"applied_user_id"`
-	Remark        string `json:"remark"`
-	ApplyTime     string `json:"apply_time"`
-	ApplyType     int    `json:"apply_type"`
+	ID            string      `json:"id"`
+	ApplyUserId   string      `json:"apply_user_id"`
+	ApplyUsername string      `json:"apply_username"`
+	AppliedUserId string      `json:"applied_user_id"`
+	Remark        string      `json:"remark"`
+	ApplyTime     string      `json:"apply_time"`
+	ApplyType     int         `json:"apply_type"`
+	Status        ApplyStatus `json:"status"`
 }
 
 func (a *Api) ListApplyRecord(c *gin.Context) {
@@ -234,9 +310,21 @@ func (a *Api) ListApplyRecord(c *gin.Context) {
 		return
 	}
 
+	needUpdate := make([]*FriendShipApply, 0)
 	record := make([]*FriendShipApply, 0)
 	record = append(record, applyingList...)
 	record = append(record, applyedList...)
+	m, _ := time.ParseDuration("-72h")
+	now := time.Now()
+	for _, fsa := range record {
+		if fsa.CreatedAt.Add(m).After(now) && fsa.Status != EXPIRE {
+			fsa.Status = EXPIRE
+			needUpdate = append(needUpdate, fsa)
+		}
+	}
+	go func() {
+		_ = a.srv.BatchUpdateApplyRecord(needUpdate)
+	}()
 	sort.Slice(record, func(i, j int) bool {
 		return record[i].CreatedAt.After(record[j].CreatedAt)
 	})
@@ -255,6 +343,7 @@ func (a *Api) ListApplyRecord(c *gin.Context) {
 			Remark:        r.Remark,
 			ApplyTime:     r.CreatedAt.Format("2006-01-02 15:04:05"),
 			ApplyType:     applyType,
+			Status:        r.Status,
 		}
 	}
 	resp.SuccessResponse(c, result)
@@ -280,9 +369,22 @@ func (a *Api) ListOffsetApplyRecord(c *gin.Context) {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
+
+	needUpdate := make([]*FriendShipApply, 0)
 	record := make([]*FriendShipApply, 0)
 	record = append(record, applyingList...)
 	record = append(record, applyedList...)
+	m, _ := time.ParseDuration("-72h")
+	now := time.Now()
+	for _, fsa := range record {
+		if fsa.CreatedAt.Add(m).After(now) && fsa.Status != EXPIRE {
+			fsa.Status = EXPIRE
+			needUpdate = append(needUpdate, fsa)
+		}
+	}
+	go func() {
+		_ = a.srv.BatchUpdateApplyRecord(needUpdate)
+	}()
 	sort.Slice(record, func(i, j int) bool {
 		return record[i].CreatedAt.After(record[j].CreatedAt)
 	})
@@ -300,6 +402,7 @@ func (a *Api) ListOffsetApplyRecord(c *gin.Context) {
 			Remark:        r.Remark,
 			ApplyTime:     r.CreatedAt.Format("2006-01-02 15:04:05"),
 			ApplyType:     applyType,
+			Status:        r.Status,
 		}
 	}
 	resp.SuccessResponse(c, result)

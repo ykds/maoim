@@ -17,6 +17,7 @@ type Dao interface {
 	BatchGetUser(userIds []string) ([]*User, error)
 	GetUserByUsername(username string) (*User, error)
 	DeleteUser(userId string) error
+	UpdateUser(u *User) error
 
 	// Friend
 	AddFriend(userId, otherUserId string) error
@@ -31,6 +32,7 @@ type Dao interface {
 	ListApplyRecord(userId string, applying bool) ([]*FriendShipApply, error)
 	ListOffsetApplyRecord(userId, recordId string, applying bool) ([]*FriendShipApply, error)
 	UpdateApplyRecord(record *FriendShipApply) error
+	BatchUpdateApplyRecord(records []*FriendShipApply) error
 
 	// Online status
 	SetOnline(userId string) error
@@ -41,6 +43,14 @@ type Dao interface {
 type dao struct {
 	rdb *redis.Redis
 	db  *mysql.Mysql
+}
+
+func (d *dao) UpdateUser(u *User) error {
+	err := d.db.GetDB().Updates(u).Error
+	if err != nil {
+		err = merror.Wrap(err, "用户更新失败")
+	}
+	return err
 }
 
 func NewDao(rdb *redis.Redis, db *mysql.Mysql) Dao {
@@ -208,6 +218,14 @@ func (d *dao) SaveApplyRecord(me, other *User, remark string) error {
 	}).Error
 	if err != nil {
 		err = merror.Wrap(err, "保存好友申请记录失败")
+	}
+	return err
+}
+
+func (d *dao) BatchUpdateApplyRecord(records []*FriendShipApply) error {
+	err := d.db.GetDB().Updates(records).Error
+	if err != nil {
+		err = merror.Wrap(err, "批量更新申请记录失败")
 	}
 	return err
 }
