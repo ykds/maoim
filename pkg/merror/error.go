@@ -7,9 +7,8 @@ import (
 
 var errorMap = make(map[int32]*Error)
 
-
 type Error struct {
-	Code int32 `json:"code"`
+	Code    int32  `json:"code"`
 	Message string `json:"message"`
 }
 
@@ -18,7 +17,7 @@ func New(code int32, message string) *Error {
 		panic(fmt.Sprintf("错误码(%d)已被占用", code))
 	}
 	e := &Error{
-		Code: code,
+		Code:    code,
 		Message: message,
 	}
 	errorMap[code] = e
@@ -41,7 +40,7 @@ func Wrapf(err error, format string, args ...interface{}) error {
 	return perr.Wrapf(err, format, args...)
 }
 
-func As(err error, target interface{}) bool  {
+func As(err error, target interface{}) bool {
 	return perr.As(err, target)
 }
 

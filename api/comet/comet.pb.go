@@ -7,9 +7,9 @@
 package comet
 
 import (
-	protocal "maoim/api/protocal"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	protocal "maoim/api/protocal"
 	reflect "reflect"
 	sync "sync"
 )

@@ -9,7 +9,7 @@ type MessageIndex struct {
 	UserId          string `json:"user_id"`
 	OtherSideUserId string `json:"other_side_user_id"`
 	Box             int8   `json:"box" comment:"0:发，1:收"`
-	IsRead            int8   `json:"is_read"`
+	IsRead          int8   `json:"is_read"`
 	MsgId           string `json:"msg_id"`
 }
 

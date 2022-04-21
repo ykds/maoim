@@ -22,7 +22,7 @@ type PullMsgDo struct {
 	MsgId       string
 	Content     string
 	ContentType int8
-	SendTime time.Time
+	SendTime    time.Time
 }
 
 type Dao interface {
@@ -56,7 +56,7 @@ func (d *dao) ListUnReadMsg(userId string) ([]*PullMsgDo, error) {
 			MsgId:       mi.MsgId,
 			Content:     mc.Content,
 			ContentType: mc.ContentType,
-			SendTime: mc.CreatedAt,
+			SendTime:    mc.CreatedAt,
 		})
 	}
 	return result, nil
@@ -79,7 +79,7 @@ func (d *dao) SaveMsg(ctx context.Context, do *SaveMsgDo) (string, error) {
 			UserId:          do.SendUserId,
 			OtherSideUserId: do.ReceiveUserId,
 			Box:             0,
-			IsRead:            1,
+			IsRead:          1,
 			MsgId:           mc.ID,
 		}
 		rMi := MessageIndex{

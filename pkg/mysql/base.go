@@ -7,7 +7,7 @@ import (
 )
 
 type BaseModel struct {
-	ID string `json:"id" gorm:"primaryKey"`
+	ID        string `json:"id" gorm:"primaryKey"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`

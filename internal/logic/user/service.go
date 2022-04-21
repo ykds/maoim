@@ -29,11 +29,12 @@ type Service interface {
 	Auth(token string) (*User, error)
 
 	GetFriends(userId string) ([]*UserVo, error)
-	ApplyFriend(userId, otherUsername, remark string) error
+	ApplyFriend(me *User, otherUsername, remark string) error
 	AddFriend(userId, otherUserId string) error
 	RemoveFriend(userId, otherUserId string) error
 	IsFriend(userId, friendId string) (bool, error)
 
+	GetApplyRecordByUserId(userId, otherUserId string) (*FriendShipApply, error)
 	ListApplyRecord(userId string, applying bool) ([]*FriendShipApply, error)
 	ListOffsetApplyRecord(userId, recordId string, applying bool) ([]*FriendShipApply, error)
 	AgreeFriendShipApply(userId, recordId string) error
@@ -121,7 +122,7 @@ func (s *service) Auth(token string) (u *User, err error) {
 	return s.GetUser(userId)
 }
 
-func (s *service) ApplyFriend(userId, otherUsername, remark string) (err error) {
+func (s *service) ApplyFriend(me *User, otherUsername, remark string) (err error) {
 	other, err := s.dao.GetUserByUsername(otherUsername)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -129,7 +130,7 @@ func (s *service) ApplyFriend(userId, otherUsername, remark string) (err error) 
 		}
 		return
 	}
-	isFriend, err := s.IsFriend(userId, other.ID)
+	isFriend, err := s.IsFriend(me.ID, other.ID)
 	if err != nil {
 		return err
 	}
@@ -137,7 +138,7 @@ func (s *service) ApplyFriend(userId, otherUsername, remark string) (err error) 
 		return AlreadyFriendErr
 	}
 
-	record, err := s.dao.GetApplyRecordByUserId(userId, other.ID)
+	record, err := s.dao.GetApplyRecordByUserId(me.ID, other.ID)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
@@ -145,7 +146,7 @@ func (s *service) ApplyFriend(userId, otherUsername, remark string) (err error) 
 		return errors.New("重复申请")
 	}
 
-	err = s.dao.SaveApplyRecord(userId, other.ID, remark)
+	err = s.dao.SaveApplyRecord(me, other, remark)
 	if err != nil {
 		return err
 	}
@@ -217,6 +218,8 @@ func (s *service) GetFriends(userId string) (vos []*UserVo, err error) {
 	if err != nil {
 		return
 	}
+
+	vos = make([]*UserVo, 0)
 	for _, u := range users {
 		vos = append(vos, &UserVo{
 			ID:       u.ID,
@@ -230,6 +233,10 @@ func (s *service) GetFriends(userId string) (vos []*UserVo, err error) {
 
 func (s *service) IsFriend(userId, friendId string) (bool, error) {
 	return s.dao.IsFriend(userId, friendId)
+}
+
+func (s *service) GetApplyRecordByUserId(userId, otherUserId string) (*FriendShipApply, error) {
+	return s.dao.GetApplyRecordByUserId(userId, otherUserId)
 }
 
 func (s *service) ListApplyRecord(userId string, applying bool) ([]*FriendShipApply, error) {
@@ -248,7 +255,7 @@ func (s service) AgreeFriendShipApply(userId, recordId string) error {
 	if record.OtherUserId != userId {
 		return errors.New("操作异常")
 	}
-	record.Agree = true
+	record.Status = PASS
 	err = s.dao.UpdateApplyRecord(record)
 	if err != nil {
 		return err

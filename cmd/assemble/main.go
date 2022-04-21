@@ -10,6 +10,7 @@ import (
 	"maoim/internal/comet/grpc"
 	"maoim/internal/logic/conf"
 	"maoim/internal/logic/wire"
+	"maoim/pkg/logger"
 	"maoim/pkg/mysql"
 	"maoim/pkg/redis"
 	"math/rand"
@@ -26,6 +27,8 @@ func main() {
 	flag.StringVar(&filepath, "config", "config.yaml", "config file path")
 	flag.Parse()
 	rand.Seed(time.Now().UnixNano())
+
+	logger.InitLogger(filepath)
 
 	config := conf.Load(filepath)
 	r := redis.New(config.Redis)

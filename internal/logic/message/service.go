@@ -26,11 +26,11 @@ type PushMsgBo struct {
 }
 
 type PullMsgBo struct {
-	SendUserId  string `json:"send_user_id"`
-	SendUsername  string `json:"send_user_name"`
-	MsgId       string `json:"msg_id"`
-	Content     string `json:"content"`
-	ContentType int8   `json:"content_type"`
+	SendUserId   string `json:"send_user_id"`
+	SendUsername string `json:"send_user_name"`
+	MsgId        string `json:"msg_id"`
+	Content      string `json:"content"`
+	ContentType  int8   `json:"content_type"`
 }
 
 type Service interface {
@@ -58,11 +58,11 @@ func (s *service) PullMsg(userId string) ([]*MsgBody, error) {
 			return nil, err
 		}
 		result = append(result, &MsgBody{
-			SendUserId:  msg.SendUserId,
-			SendUsername:  u.Username,
-			MsgId:       msg.MsgId,
-			Content:     msg.Content,
-			SendTime: msg.SendTime.Format("2006-01-02 15:04:05"),
+			SendUserId:   msg.SendUserId,
+			SendUsername: u.Username,
+			MsgId:        msg.MsgId,
+			Content:      msg.Content,
+			SendTime:     msg.SendTime.Format("2006-01-02 15:04:05"),
 			//ContentType: msg.ContentType,
 		})
 	}
@@ -98,11 +98,11 @@ func (s *service) canPush(userId, friendId, msg string) (bool, error) {
 }
 
 type MsgBody struct {
-	SendUserId string `json:"send_user_id"`
+	SendUserId   string `json:"send_user_id"`
 	SendUsername string `json:"send_username"`
-	MsgId string `json:"msg_id"`
-	Content string `json:"content"`
-	SendTime string `json:"send_time"`
+	MsgId        string `json:"msg_id"`
+	Content      string `json:"content"`
+	SendTime     string `json:"send_time"`
 }
 
 func (s *service) PushMsg(bo *PushMsgBo) error {
@@ -126,11 +126,11 @@ func (s *service) PushMsg(bo *PushMsgBo) error {
 	}
 
 	body := &MsgBody{
-		SendUserId: bo.u.ID,
+		SendUserId:   bo.u.ID,
 		SendUsername: bo.u.Username,
-		MsgId: msgId,
-		Content: bo.Body,
-		SendTime: time.Now().Format("2006-01-02 15:04:05"),
+		MsgId:        msgId,
+		Content:      bo.Body,
+		SendTime:     time.Now().Format("2006-01-02 15:04:05"),
 	}
 
 	b, err := json.Marshal(body)

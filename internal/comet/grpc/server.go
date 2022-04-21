@@ -55,7 +55,6 @@ func (s *server) PushMsg(ctx context.Context, req *pb.PushMsgReq) (*pb.PushMsgRe
 	return &pb.PushMsgReply{}, nil
 }
 
-
 func (s *server) NewFriendShipApplyNotice(ctx context.Context, req *pb.NewFriendShipApplyNoticeReq) (*pb.NewFriendShipApplyNoticeReply, error) {
 	if req.GetUserId() == "" {
 		return nil, errors.New("req params is invalid")

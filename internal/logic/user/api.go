@@ -3,11 +3,30 @@ package user
 import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
+	"gorm.io/gorm"
 	"maoim/api/comet"
 	"maoim/internal/pkg/resp"
+	"maoim/pkg/logger"
 	"net/http"
 	"sort"
 )
+
+type ApplyDetailStatus int
+
+const (
+	STRANGER = iota + 1
+	FRIEND
+	WAIT_AGREE
+)
+
+type UserInfoVo struct {
+	ID       string            `json:"id"`
+	Username string            `json:"username"`
+	Nickname string            `json:"nickname"`
+	Mobile   string            `json:"mobile"`
+	Avatar   string            `json:"avatar"`
+	Status   ApplyDetailStatus `json:"status"`
+}
 
 type Api struct {
 	srv         Service
@@ -60,41 +79,71 @@ func (a *Api) Login(c *gin.Context) {
 
 	err := c.ShouldBind(&arg)
 	if err != nil || arg.Username == "" || arg.Password == "" {
-		resp.Response(c, http.StatusBadRequest,  "username或password为空", nil)
+		resp.Response(c, http.StatusBadRequest, "username或password为空", nil)
 		return
 	}
 
 	token, err := a.srv.Login(arg.Username, arg.Password)
 	if err != nil {
-		resp.Response(c, http.StatusInternalServerError,  err.Error(), nil)
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 	resp.SuccessResponse(c, token)
 }
 
-//func (a *Api) AddFriend(c *gin.Context) {
-//	var (
-//		arg struct {
-//			Friendname string `json:"friendname"`
-//		}
-//	)
-//
-//	user, _ := c.Get("user")
-//	u := user.(*User)
-//
-//	err := c.ShouldBind(&arg)
-//	if err != nil || arg.Friendname == "" {
-//		c.JSON(200, gin.H{"code": 400, "message": "Friendname为空"})
-//		return
-//	}
-//
-//	err = a.srv.AddFriend(u.Username, arg.Friendname)
-//	if err != nil {
-//		c.JSON(200, gin.H{"code": 500, "message": err.Error()})
-//		return
-//	}
-//	c.JSON(200, gin.H{"code": 200, "message": "success"})
-//}
+func (a *Api) GetUserInfo(c *gin.Context) {
+	username := c.Query("username")
+	if username == "" {
+		resp.Response(c, http.StatusBadRequest, "username不能为空", nil)
+		return
+	}
+
+	authUser, _ := c.Get("user")
+	u := authUser.(*User)
+
+	user, err := a.srv.GetUserByUsername(username)
+	if err != nil {
+		logger.Error(err.Error())
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	userInfoVo := &UserInfoVo{
+		ID:       user.ID,
+		Username: user.Username,
+		Nickname: user.Nickname,
+		Avatar:   user.Avatar,
+	}
+
+	isFriend, err := a.srv.IsFriend(u.ID, user.ID)
+	if err != nil {
+		logger.Error(err.Error())
+		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+	if isFriend {
+		userInfoVo.Status = FRIEND
+	} else {
+		apply, err := a.srv.GetApplyRecordByUserId(user.ID, u.ID)
+		if err == nil {
+			if apply.Status == PASS {
+				userInfoVo.Status = FRIEND
+			} else {
+				userInfoVo.Status = WAIT_AGREE
+			}
+		} else {
+			if err == gorm.ErrRecordNotFound {
+				userInfoVo.Status = STRANGER
+			} else {
+				logger.Error(err.Error())
+				resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
+				return
+			}
+		}
+	}
+
+	resp.SuccessResponse(c, userInfoVo)
+}
 
 func (a *Api) DeleteFriend(c *gin.Context) {
 	var (
@@ -139,7 +188,7 @@ func (a *Api) ApplyFriend(c *gin.Context) {
 	var (
 		arg struct {
 			OtherUsername string `json:"other_username"`
-			Remark      string `json:"remark"`
+			Remark        string `json:"remark"`
 		}
 	)
 
@@ -152,7 +201,7 @@ func (a *Api) ApplyFriend(c *gin.Context) {
 	get, _ := c.Get("user")
 	u := get.(*User)
 
-	err = a.srv.ApplyFriend(u.ID, arg.OtherUsername, arg.Remark)
+	err = a.srv.ApplyFriend(u, arg.OtherUsername, arg.Remark)
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -161,13 +210,13 @@ func (a *Api) ApplyFriend(c *gin.Context) {
 }
 
 type ApplyRecord struct {
-	ID string `json:"id"`
-	ApplyUserId string `json:"apply_user_id"`
+	ID            string `json:"id"`
+	ApplyUserId   string `json:"apply_user_id"`
 	ApplyUsername string `json:"apply_username"`
 	AppliedUserId string `json:"applied_user_id"`
-	Remark string `json:"remark"`
-	ApplyTime string `json:"apply_time"`
-	ApplyType int `json:"apply_type"`
+	Remark        string `json:"remark"`
+	ApplyTime     string `json:"apply_time"`
+	ApplyType     int    `json:"apply_type"`
 }
 
 func (a *Api) ListApplyRecord(c *gin.Context) {
@@ -199,13 +248,13 @@ func (a *Api) ListApplyRecord(c *gin.Context) {
 			applyType = 1
 		}
 		result[i] = ApplyRecord{
-			ID: r.ID,
-			ApplyUserId: r.UserId,
+			ID:            r.ID,
+			ApplyUserId:   r.UserId,
 			ApplyUsername: r.Username,
 			AppliedUserId: r.OtherUserId,
-			Remark: r.Remark,
-			ApplyTime: r.CreatedAt.Format("2006-01-02 15:04:05"),
-			ApplyType: applyType,
+			Remark:        r.Remark,
+			ApplyTime:     r.CreatedAt.Format("2006-01-02 15:04:05"),
+			ApplyType:     applyType,
 		}
 	}
 	resp.SuccessResponse(c, result)
@@ -244,13 +293,13 @@ func (a *Api) ListOffsetApplyRecord(c *gin.Context) {
 			applyType = 1
 		}
 		result[i] = ApplyRecord{
-			ID: r.ID,
-			ApplyUserId: r.UserId,
+			ID:            r.ID,
+			ApplyUserId:   r.UserId,
 			ApplyUsername: r.Username,
 			AppliedUserId: r.OtherUserId,
-			Remark: r.Remark,
-			ApplyTime: r.CreatedAt.Format("2006-01-02 15:04:05"),
-			ApplyType: applyType,
+			Remark:        r.Remark,
+			ApplyTime:     r.CreatedAt.Format("2006-01-02 15:04:05"),
+			ApplyType:     applyType,
 		}
 	}
 	resp.SuccessResponse(c, result)

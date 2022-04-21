@@ -6,7 +6,6 @@ import (
 	"maoim/pkg/merror"
 	"maoim/pkg/mysql"
 	"maoim/pkg/redis"
-	"time"
 )
 
 var _ Dao = (*dao)(nil)
@@ -28,7 +27,7 @@ type Dao interface {
 	// Apply Record
 	GetApplyRecord(recordId string) (*FriendShipApply, error)
 	GetApplyRecordByUserId(userId, otherUserId string) (*FriendShipApply, error)
-	SaveApplyRecord(userId, otherUserId, remark string) error
+	SaveApplyRecord(userId, otherUserId *User, remark string) error
 	ListApplyRecord(userId string, applying bool) ([]*FriendShipApply, error)
 	ListOffsetApplyRecord(userId, recordId string, applying bool) ([]*FriendShipApply, error)
 	UpdateApplyRecord(record *FriendShipApply) error
@@ -82,6 +81,9 @@ func (d *dao) BatchGetUser(userIds []string) (u []*User, err error) {
 
 func (d *dao) GetUserByUsername(username string) (u *User, err error) {
 	err = d.db.GetDB().Where("username = ?", username).First(&u).Error
+	if err != nil {
+		err = merror.Wrap(err, "根据用户名查询用户失败")
+	}
 	return
 }
 
@@ -161,15 +163,14 @@ func (d *dao) GetApplyRecordByUserId(userId, otherUserId string) (f *FriendShipA
 
 // ListApplyRecord 获取好友申请列表
 func (d *dao) ListApplyRecord(userId string, applying bool) (fsaList []*FriendShipApply, err error) {
-	m, _ := time.ParseDuration("-72h")
-	sqlTxt := "%s = ? AND agree = 0 AND created_at >= ?"
+	sqlTxt := "%s = ? AND agree = 0"
 	var who string
 	if applying {
 		who = "user_id"
 	} else {
 		who = "other_user_id"
 	}
-	err = d.db.GetDB().Where(fmt.Sprintf(sqlTxt, who), userId, time.Now().Add(m)).Find(&fsaList).Error
+	err = d.db.GetDB().Where(fmt.Sprintf(sqlTxt, who), userId).Find(&fsaList).Error
 	if err != nil {
 		err = merror.Wrap(err, "获取好友申请记录列表失败")
 	}
@@ -178,15 +179,14 @@ func (d *dao) ListApplyRecord(userId string, applying bool) (fsaList []*FriendSh
 
 //
 func (d *dao) ListOffsetApplyRecord(userId, recordId string, applying bool) (fsaList []*FriendShipApply, err error) {
-	m, _ := time.ParseDuration("-72h")
-	sqlTxt := "%s = ? AND agree = 0 AND created_at >= ? AND id > ?"
+	sqlTxt := "%s = ? AND agree = 0 AND id > ?"
 	var who string
 	if applying {
 		who = "user_id"
 	} else {
 		who = "other_user_id"
 	}
-	err = d.db.GetDB().Where(fmt.Sprintf(sqlTxt, who), userId, time.Now().Add(m), recordId).Find(&fsaList).Error
+	err = d.db.GetDB().Where(fmt.Sprintf(sqlTxt, who), userId, recordId).Find(&fsaList).Error
 	if err != nil {
 		err = merror.Wrap(err, "增量获取好友申请记录列表失败")
 	}
@@ -197,18 +197,19 @@ func (d *dao) UpdateApplyRecord(record *FriendShipApply) error {
 	return d.db.GetDB().Where("id = ?", record.ID).Updates(record).Error
 }
 
-func (d *dao) SaveApplyRecord(userId, otherUserId, remark string) error {
-	user, err := d.GetUser(userId)
-	if err != nil {
-		return err
-	}
-
-	return d.db.GetDB().Create(&FriendShipApply{
-		UserId:      userId,
-		Username:    user.Username,
-		OtherUserId: otherUserId,
-		Remark:      remark,
+func (d *dao) SaveApplyRecord(me, other *User, remark string) error {
+	err := d.db.GetDB().Create(&FriendShipApply{
+		UserId:        me.ID,
+		Username:      me.Username,
+		OtherUserId:   other.ID,
+		OtherUsername: other.Nickname,
+		Remark:        remark,
+		Status:        WAIT_VERY,
 	}).Error
+	if err != nil {
+		err = merror.Wrap(err, "保存好友申请记录失败")
+	}
+	return err
 }
 
 // Online status
