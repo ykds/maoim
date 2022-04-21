@@ -9,7 +9,7 @@ import (
 )
 
 func NewMessageGrpcClient() pb.MessageClient {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	dial, err := grpc.DialContext(ctx, ":9002", []grpc.DialOption{

@@ -9,7 +9,7 @@ import (
 )
 
 func NewCometGrpcClient() pb.CometClient {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	dial, err := grpc.DialContext(ctx, ":9000", []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),

@@ -65,37 +65,48 @@ func (d *dao) SaveUser(u *User) error {
 // GetUser 获取用户
 func (d *dao) GetUser(userId string) (u *User, err error) {
 	err = d.db.GetDB().Where("id = ?", userId).First(&u).Error
+	if err != nil {
+		err = merror.Wrap(err, "获取用户失败")
+	}
 	return
 }
 
 // BatchGetUser 批量获取用户
 func (d *dao) BatchGetUser(userIds []string) (u []*User, err error) {
 	err = d.db.GetDB().Where("id in ?", userIds).Find(&u).Error
+	if err != nil {
+		err = merror.Wrap(err, "批量获取用户失败")
+	}
 	return
 }
 
 func (d *dao) GetUserByUsername(username string) (u *User, err error) {
 	err = d.db.GetDB().Where("username = ?", username).First(&u).Error
-	if err != nil {
-		err = merror.Wrap(err, "根据用户名查询用户失败")
-	}
 	return
 }
 
 // DeleteUser 删除用户
 func (d *dao) DeleteUser(userId string) error {
-	return d.db.GetDB().Delete("id = ?", userId).Error
+	err := d.db.GetDB().Delete("id = ?", userId).Error
+	if err != nil {
+		err = merror.Wrap(err, "删除用户失败")
+	}
+	return err
 }
 
 // Friend Module
 // AddFriend 添加好友
 func (d *dao) AddFriend(userId, otherUserId string) error {
-	return d.db.GetDB().Create(&FriendShip{UserId: userId, FUserId: otherUserId}).Error
+	err := d.db.GetDB().Create(&FriendShip{UserId: userId, FUserId: otherUserId}).Error
+	if err != nil {
+		err = merror.Wrap(err, "添加好友失败")
+	}
+	return err
 }
 
 // RemoveFriend 删除好友
 func (d *dao) RemoveFriend(userId, otherUserId string) error {
-	return d.db.GetDB().Transaction(func(tx *gorm.DB) error {
+	err := d.db.GetDB().Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete("user_id = ? AND f_user_id = ?", userId, otherUserId).Error; err != nil {
 			return err
 		}
@@ -104,12 +115,18 @@ func (d *dao) RemoveFriend(userId, otherUserId string) error {
 		}
 		return nil
 	})
+	if err != nil {
+		err = merror.Wrap(err, "删除好友失败")
+	}
+	return err
 }
-
 
 // GetFriendList 获取好友列表
 func (d *dao) GetFriendList(userId string) (fs []*FriendShip, err error) {
 	err = d.db.GetDB().Where("user_id = ?", userId).Find(&fs).Error
+	if err != nil {
+		err = merror.Wrap(err, "获取好友列表失败")
+	}
 	return
 }
 
@@ -117,21 +134,32 @@ func (d *dao) GetFriendList(userId string) (fs []*FriendShip, err error) {
 func (d *dao) IsFriend(userId, friendId string) (bool, error) {
 	var count int64
 	err := d.db.GetDB().Model(&FriendShip{}).Where("user_id = ? AND f_user_id = ?", userId, friendId).Count(&count).Error
+	if err != nil {
+		err = merror.Wrap(err, "查询好友关系失败")
+	}
 	return count > 0, err
 }
 
-
 // Apply Record Module
+// GetApplyRecord 获取好友申请记录
 func (d *dao) GetApplyRecord(recordId string) (f *FriendShipApply, err error) {
 	err = d.db.GetDB().Where("id = ? AND agree = 0", recordId).First(&f).Error
+	if err != nil {
+		err = merror.Wrap(err, "获取好友申请记录失败")
+	}
 	return
 }
 
+// GetApplyRecordByUserId 根据 userid 获取好友申请记录
 func (d *dao) GetApplyRecordByUserId(userId, otherUserId string) (f *FriendShipApply, err error) {
 	err = d.db.GetDB().Where("user_id = ? AND other_user_id = ?", userId, otherUserId).First(&f).Error
+	if err != nil {
+		err = merror.Wrap(err, "获取好友申请记录失败")
+	}
 	return
 }
 
+// ListApplyRecord 获取好友申请列表
 func (d *dao) ListApplyRecord(userId string, applying bool) (fsaList []*FriendShipApply, err error) {
 	m, _ := time.ParseDuration("-72h")
 	sqlTxt := "%s = ? AND agree = 0 AND created_at >= ?"
@@ -142,9 +170,13 @@ func (d *dao) ListApplyRecord(userId string, applying bool) (fsaList []*FriendSh
 		who = "other_user_id"
 	}
 	err = d.db.GetDB().Where(fmt.Sprintf(sqlTxt, who), userId, time.Now().Add(m)).Find(&fsaList).Error
+	if err != nil {
+		err = merror.Wrap(err, "获取好友申请记录列表失败")
+	}
 	return
 }
 
+//
 func (d *dao) ListOffsetApplyRecord(userId, recordId string, applying bool) (fsaList []*FriendShipApply, err error) {
 	m, _ := time.ParseDuration("-72h")
 	sqlTxt := "%s = ? AND agree = 0 AND created_at >= ? AND id > ?"
@@ -155,6 +187,9 @@ func (d *dao) ListOffsetApplyRecord(userId, recordId string, applying bool) (fsa
 		who = "other_user_id"
 	}
 	err = d.db.GetDB().Where(fmt.Sprintf(sqlTxt, who), userId, time.Now().Add(m), recordId).Find(&fsaList).Error
+	if err != nil {
+		err = merror.Wrap(err, "增量获取好友申请记录列表失败")
+	}
 	return
 }
 
@@ -180,7 +215,6 @@ func (d *dao) SaveApplyRecord(userId, otherUserId, remark string) error {
 func (d *dao) IsOnline(userId string) (bool, error) {
 	return d.rdb.HExists("ONLINE_MAP", userId)
 }
-
 
 func (d *dao) SetOnline(userId string) error {
 	return d.rdb.HSet("ONLINE_MAP", userId, 1)

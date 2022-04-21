@@ -39,7 +39,7 @@ func (s *Server) GetUserByUsername(ctx context.Context, req *pb.GetUserReq) (*pb
 	if req.GetUsername() == "" {
 		return nil, fmt.Errorf("用户名不能为空")
 	}
-	u, err := s.srv.GetUser(req.GetUsername())
+	u, err := s.srv.GetUserByUsername(req.GetUsername())
 	if err != nil {
 		return nil, err
 	}

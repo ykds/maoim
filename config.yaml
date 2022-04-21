@@ -12,3 +12,6 @@ redis:
 
 logic:
   port: 8001
+
+assemble:
+  port: 9130

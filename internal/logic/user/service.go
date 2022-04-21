@@ -15,7 +15,7 @@ type UserVo struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
 	Nickname string `json:"nickname"`
-	Avatar string `json:"avatar"`
+	Avatar   string `json:"avatar"`
 }
 
 var _ Service = &service{}
@@ -25,6 +25,7 @@ type Service interface {
 	Login(username, password string) (string, error)
 	Logout(userId string) error
 	GetUser(userId string) (*User, error)
+	GetUserByUsername(username string) (*User, error)
 	Auth(token string) (*User, error)
 
 	GetFriends(userId string) ([]*UserVo, error)
@@ -47,6 +48,10 @@ type service struct {
 	cometClient comet.CometClient
 }
 
+func (s *service) GetUserByUsername(username string) (*User, error) {
+	return s.dao.GetUserByUsername(username)
+}
+
 func NewService(d Dao, cometClient comet.CometClient) Service {
 	return &service{
 		dao:         d,
@@ -54,16 +59,16 @@ func NewService(d Dao, cometClient comet.CometClient) Service {
 	}
 }
 
-
 func (s *service) Register(username, password string) (u *User, err error) {
 	_, err = s.dao.GetUserByUsername(username)
-	// err = nil 时，说明没有报找不到err或其它err
+	// err = nil 时，说明没有报找不到err或其它err，说明存在用户
 	if err == nil {
 		err = merror.WithMessage(err, HasRegisterErr.Error())
 		return
 	}
 	// 查询 db 报其它err
-	if err != gorm.ErrRecordNotFound{
+	if err != gorm.ErrRecordNotFound {
+		err = merror.WithMessage(err, RegisterErr.Error())
 		return
 	}
 
@@ -81,7 +86,11 @@ func (s *service) Register(username, password string) (u *User, err error) {
 func (s *service) Login(username, password string) (str string, err error) {
 	u, err := s.dao.GetUserByUsername(username)
 	if err != nil {
-		err = LoginFailErr
+		if err == gorm.ErrRecordNotFound {
+			err = UserNotFound
+		} else {
+			err = LoginFailErr
+		}
 		return
 	}
 	if encrypt.Encrypt([]byte(password)) != u.Password {
@@ -112,11 +121,13 @@ func (s *service) Auth(token string) (u *User, err error) {
 	return s.GetUser(userId)
 }
 
-
-func (s *service) ApplyFriend(userId, otherUsername, remark string) error {
+func (s *service) ApplyFriend(userId, otherUsername, remark string) (err error) {
 	other, err := s.dao.GetUserByUsername(otherUsername)
 	if err != nil {
-		return err
+		if err == gorm.ErrRecordNotFound {
+			err = UserNotFound
+		}
+		return
 	}
 	isFriend, err := s.IsFriend(userId, other.ID)
 	if err != nil {
@@ -208,10 +219,10 @@ func (s *service) GetFriends(userId string) (vos []*UserVo, err error) {
 	}
 	for _, u := range users {
 		vos = append(vos, &UserVo{
-			ID: u.ID,
+			ID:       u.ID,
 			Username: u.Username,
 			Nickname: u.Nickname,
-			Avatar: u.Avatar,
+			Avatar:   u.Avatar,
 		})
 	}
 	return
@@ -220,7 +231,6 @@ func (s *service) GetFriends(userId string) (vos []*UserVo, err error) {
 func (s *service) IsFriend(userId, friendId string) (bool, error) {
 	return s.dao.IsFriend(userId, friendId)
 }
-
 
 func (s *service) ListApplyRecord(userId string, applying bool) ([]*FriendShipApply, error) {
 	return s.dao.ListApplyRecord(userId, applying)
@@ -254,7 +264,6 @@ func (s service) AgreeFriendShipApply(userId, recordId string) error {
 	})
 	return err
 }
-
 
 func (s *service) Disconnect(userId string) error {
 	return s.dao.SetOffline(userId)

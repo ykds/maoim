@@ -52,7 +52,11 @@ func (s *Server) WsHandler(c *gin.Context) {
 
 	u, err := s.auth(c)
 	if err != nil {
-		_ = conn.WriteWebsocket(websocket.TextFrame, []byte(err.Error()))
+		p := &protocal.Proto{
+			Op:   protocal.OpErr,
+			Body: []byte(err.Error()),
+		}
+		_ = conn.WriteWebsocket(websocket.BinaryFrame, p.Pack())
 		_ = conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
 		_ = conn.Close()
 		return
@@ -73,7 +77,11 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user2.User) {
 	ch := NewChannel(conn)
 	ch.IP, ch.Port, err = net.SplitHostPort(c.RemoteAddr().String())
 	if err != nil {
-		_ = ch.Conn.WriteWebsocket(websocket.TextFrame, []byte("IP Address format merror"))
+		p := &protocal.Proto{
+			Op:   protocal.OpErr,
+			Body: []byte("IP Address format merror"),
+		}
+		_ = conn.WriteWebsocket(websocket.BinaryFrame, p.Pack())
 		_ = conn.WriteWebsocket(websocket.CloseFrame, []byte(""))
 		return
 	}
@@ -133,8 +141,8 @@ func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
 				continue
 			}
 			_, err := s.messageClient.AckMsg(context.Background(), &mpb.AckReq{
-				UserId:   ch.Key,
-				MsgId:    ackReq.MsgIdList,
+				UserId: ch.Key,
+				MsgId:  ackReq.MsgIdList,
 			})
 			if err != nil {
 				fmt.Println(err)
@@ -173,7 +181,7 @@ func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}, key string) 
 	defer func() {
 		t.Stop()
 		_, _ = s.userClient.Disconnect(context.Background(), &pb.DisconnectReq{
-			UserId:   key,
+			UserId: key,
 		})
 	}()
 
@@ -182,7 +190,7 @@ func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}, key string) 
 		case <-hb:
 			t.Reset(HeartBeatInterval)
 			_, _ = s.userClient.Connect(context.Background(), &pb.ConnectReq{
-				UserId:   key,
+				UserId: key,
 			})
 		case <-t.C:
 			return fmt.Errorf("heartbeat time out. connection closed")
