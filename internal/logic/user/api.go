@@ -34,7 +34,7 @@ type UserInfoVo struct {
 	Nickname string            `json:"nickname"`
 	Mobile   string            `json:"mobile"`
 	Avatar   string            `json:"avatar"`
-	Status   ApplyDetailStatus `json:"status;omitempty"`
+	Status   ApplyDetailStatus `json:"status,omitempty"`
 }
 
 type Api struct {
@@ -285,14 +285,15 @@ func (a *Api) ApplyFriend(c *gin.Context) {
 }
 
 type ApplyRecord struct {
-	ID            string      `json:"id"`
-	ApplyUserId   string      `json:"apply_user_id"`
-	ApplyUsername string      `json:"apply_username"`
-	AppliedUserId string      `json:"applied_user_id"`
-	Remark        string      `json:"remark"`
-	ApplyTime     string      `json:"apply_time"`
-	ApplyType     int         `json:"apply_type"`
-	Status        ApplyStatus `json:"status"`
+	ID              string      `json:"id"`
+	ApplyUserId     string      `json:"apply_user_id"`
+	ApplyUsername   string      `json:"apply_username"`
+	AppliedUserId   string      `json:"applied_user_id"`
+	AppliedUsername string      `json:"applied_username"`
+	Remark          string      `json:"remark"`
+	ApplyTime       string      `json:"apply_time"`
+	ApplyType       int         `json:"apply_type"`
+	Status          ApplyStatus `json:"status"`
 }
 
 func (a *Api) ListApplyRecord(c *gin.Context) {
@@ -336,14 +337,15 @@ func (a *Api) ListApplyRecord(c *gin.Context) {
 			applyType = 1
 		}
 		result[i] = ApplyRecord{
-			ID:            r.ID,
-			ApplyUserId:   r.UserId,
-			ApplyUsername: r.Username,
-			AppliedUserId: r.OtherUserId,
-			Remark:        r.Remark,
-			ApplyTime:     r.CreatedAt.Format("2006-01-02 15:04:05"),
-			ApplyType:     applyType,
-			Status:        r.Status,
+			ID:              r.ID,
+			ApplyUserId:     r.UserId,
+			ApplyUsername:   r.Username,
+			AppliedUserId:   r.OtherUserId,
+			AppliedUsername: r.OtherUsername,
+			Remark:          r.Remark,
+			ApplyTime:       r.CreatedAt.Format("2006-01-02 15:04:05"),
+			ApplyType:       applyType,
+			Status:          r.Status,
 		}
 	}
 	resp.SuccessResponse(c, result)
@@ -395,14 +397,15 @@ func (a *Api) ListOffsetApplyRecord(c *gin.Context) {
 			applyType = 1
 		}
 		result[i] = ApplyRecord{
-			ID:            r.ID,
-			ApplyUserId:   r.UserId,
-			ApplyUsername: r.Username,
-			AppliedUserId: r.OtherUserId,
-			Remark:        r.Remark,
-			ApplyTime:     r.CreatedAt.Format("2006-01-02 15:04:05"),
-			ApplyType:     applyType,
-			Status:        r.Status,
+			ID:              r.ID,
+			ApplyUserId:     r.UserId,
+			ApplyUsername:   r.Username,
+			AppliedUserId:   r.OtherUserId,
+			AppliedUsername: r.OtherUsername,
+			Remark:          r.Remark,
+			ApplyTime:       r.CreatedAt.Format("2006-01-02 15:04:05"),
+			ApplyType:       applyType,
+			Status:          r.Status,
 		}
 	}
 	resp.SuccessResponse(c, result)

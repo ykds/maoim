@@ -173,7 +173,7 @@ func (d *dao) GetApplyRecordByUserId(userId, otherUserId string) (f *FriendShipA
 
 // ListApplyRecord 获取好友申请列表
 func (d *dao) ListApplyRecord(userId string, applying bool) (fsaList []*FriendShipApply, err error) {
-	sqlTxt := "%s = ? AND agree = 0"
+	sqlTxt := "%s = ?"
 	var who string
 	if applying {
 		who = "user_id"
@@ -189,7 +189,7 @@ func (d *dao) ListApplyRecord(userId string, applying bool) (fsaList []*FriendSh
 
 //
 func (d *dao) ListOffsetApplyRecord(userId, recordId string, applying bool) (fsaList []*FriendShipApply, err error) {
-	sqlTxt := "%s = ? AND agree = 0 AND id > ?"
+	sqlTxt := "%s = ? AND id > ?"
 	var who string
 	if applying {
 		who = "user_id"

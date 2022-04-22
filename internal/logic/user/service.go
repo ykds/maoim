@@ -72,6 +72,7 @@ func (s *service) Register(username, password string) (u *User, err error) {
 	}
 
 	u = &User{
+		Nickname: username,
 		Username: username,
 		Password: encrypt.Encrypt([]byte(password)),
 	}
@@ -85,7 +86,7 @@ func (s *service) Register(username, password string) (u *User, err error) {
 func (s *service) Login(username, password string) (str string, err error) {
 	u, err := s.dao.GetUserByUsername(username)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if merror.Is(err, gorm.ErrRecordNotFound) {
 			err = UserNotFound
 		} else {
 			err = LoginFailErr
@@ -131,7 +132,7 @@ func (s *service) Auth(token string) (u *User, err error) {
 func (s *service) ApplyFriend(me *User, otherUsername, remark string) (err error) {
 	other, err := s.dao.GetUserByUsername(otherUsername)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if merror.Is(err, gorm.ErrRecordNotFound) {
 			err = UserNotFound
 		}
 		return
@@ -144,13 +145,13 @@ func (s *service) ApplyFriend(me *User, otherUsername, remark string) (err error
 		return AlreadyFriendErr
 	}
 
-	record, err := s.dao.GetApplyRecordByUserId(me.ID, other.ID)
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return err
-	}
-	if record != nil && record.ID != "" {
-		return errors.New("重复申请")
-	}
+	//record, err := s.dao.GetApplyRecordByUserId(me.ID, other.ID)
+	//if err != nil && !merror.Is(err, gorm.ErrRecordNotFound) {
+	//	return err
+	//}
+	//if record != nil && record.ID != "" {
+	//	return errors.New("重复申请")
+	//}
 
 	err = s.dao.SaveApplyRecord(me, other, remark)
 	if err != nil {
