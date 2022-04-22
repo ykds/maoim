@@ -55,10 +55,16 @@ func (a *Api) PushMsg(c *gin.Context) {
 }
 
 func (a *Api) PullMsg(c *gin.Context) {
+	userId := c.Query("user_id")
+	if userId == "" {
+		resp.Response(c, http.StatusBadRequest, "缺少userId", nil)
+		return
+	}
+
 	u, _ := c.Get("user")
 	us, _ := u.(*user.User)
 
-	msg, err := a.srv.PullMsg(us.ID)
+	msg, err := a.srv.PullMsg(us.ID, userId)
 	if err != nil {
 		resp.Response(c, http.StatusInternalServerError, err.Error(), nil)
 		return

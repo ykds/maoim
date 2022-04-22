@@ -38,7 +38,7 @@ type Service interface {
 	PushMsg(bo *PushMsgBo) error
 	AckMsg(userId string, msgId []string) error
 	SaveMsg(do *SaveMsgDo) (string, error)
-	PullMsg(userId string) ([]*MsgBody, error)
+	PullMsg(myUserId, otherUserId string) ([]*MsgBody, error)
 }
 
 type service struct {
@@ -46,8 +46,8 @@ type service struct {
 	d       Dao
 }
 
-func (s *service) PullMsg(userId string) ([]*MsgBody, error) {
-	unReadMsg, err := s.d.ListUnReadMsg(userId)
+func (s *service) PullMsg(myUserId, otherUserId string) ([]*MsgBody, error) {
+	unReadMsg, err := s.d.ListUnReadMsg(myUserId, otherUserId)
 	if err != nil {
 		return nil, err
 	}

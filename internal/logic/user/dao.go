@@ -155,7 +155,7 @@ func (d *dao) IsFriend(userId, friendId string) (bool, error) {
 // Apply Record Module
 // GetApplyRecord 获取好友申请记录
 func (d *dao) GetApplyRecord(recordId string) (f *FriendShipApply, err error) {
-	err = d.db.GetDB().Where("id = ? AND agree = 0", recordId).First(&f).Error
+	err = d.db.GetDB().Where("id = ?", recordId).First(&f).Error
 	if err != nil {
 		err = merror.Wrap(err, "获取好友申请记录失败")
 	}

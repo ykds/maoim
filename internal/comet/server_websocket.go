@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	HeartBeatInterval = 100 * time.Minute
+	HeartBeatInterval = 5 * time.Minute
 )
 
 func (s *Server) auth(c *gin.Context) (*user2.User, error) {
@@ -104,6 +104,7 @@ func (s *Server) serveWebsocket(conn *websocket.Conn, user *user2.User) {
 		return nil
 	})
 	if err = g.Wait(); err != nil {
+		conn.Close()
 		fmt.Printf("(%s, %s) is offline\n", user.ID, user.Username)
 	}
 }
@@ -121,6 +122,7 @@ func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
 			return err
 		}
 		if p.Op == protocal.OpHeartBeat {
+			fmt.Println("receiver heartbeat packet")
 			if now := time.Now(); now.Sub(lastHB) > HeartBeatInterval {
 				_ = ch.Push(comet.ProtoHeartBeatReply)
 				hb <- struct{}{}
@@ -188,11 +190,13 @@ func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}, key string) 
 	for {
 		select {
 		case <-hb:
+			fmt.Println("handle heartbeat")
 			t.Reset(HeartBeatInterval)
 			_, _ = s.userClient.Connect(context.Background(), &pb.ConnectReq{
 				UserId: key,
 			})
 		case <-t.C:
+			fmt.Println("heartbeat timeout, close conn")
 			return fmt.Errorf("heartbeat time out. connection closed")
 		case <-ctx.Done():
 			return ctx.Err()

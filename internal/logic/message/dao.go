@@ -29,7 +29,7 @@ type Dao interface {
 	PushMsg(ctx context.Context, req *cpb.PushMsgReq) error
 	SaveMsg(ctx context.Context, do *SaveMsgDo) (string, error)
 	AckMsg(userId string, msgId []string) error
-	ListUnReadMsg(userId string) ([]*PullMsgDo, error)
+	ListUnReadMsg(myUserId, otherUserId string) ([]*PullMsgDo, error)
 }
 
 type dao struct {
@@ -37,9 +37,9 @@ type dao struct {
 	db          *mysql.Mysql
 }
 
-func (d *dao) ListUnReadMsg(userId string) ([]*PullMsgDo, error) {
+func (d *dao) ListUnReadMsg(myUserId, otherUserId string) ([]*PullMsgDo, error) {
 	mis := make([]MessageIndex, 0)
-	err := d.db.GetDB().Where("user_id = ? AND box = 1 AND is_read = 0", userId).Find(&mis).Error
+	err := d.db.GetDB().Where("user_id = ? AND other_user_id = ? AND box = 1 AND is_read = 0", otherUserId, myUserId).Find(&mis).Error
 	if err != nil {
 		return nil, err
 	}

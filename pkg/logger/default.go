@@ -5,7 +5,7 @@ import "maoim/pkg/yaml"
 var defaultLogger Logger
 
 func InitLogger(configFile string) {
-	c := &Config{}
+	c := Default()
 	err := yaml.DecodeFile(configFile, c)
 	if err != nil {
 		panic(err)

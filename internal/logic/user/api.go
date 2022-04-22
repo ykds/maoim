@@ -35,6 +35,7 @@ type UserInfoVo struct {
 	Mobile   string            `json:"mobile"`
 	Avatar   string            `json:"avatar"`
 	Status   ApplyDetailStatus `json:"status,omitempty"`
+	RecordId string            `json:"record_id,omitempty"`
 }
 
 type Api struct {
@@ -205,6 +206,7 @@ func (a *Api) GetUserInfo(c *gin.Context) {
 				userInfoVo.Status = FRIEND
 			} else {
 				userInfoVo.Status = WAIT_AGREE
+				userInfoVo.RecordId = apply.ID
 			}
 		} else {
 			if merror.Is(err, gorm.ErrRecordNotFound) {
