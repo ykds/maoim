@@ -71,8 +71,6 @@ func (c *Conn) ReadWebSocket() (op int, payload []byte, err error) {
 				return
 			}
 		case PingFrame:
-			err = c.WriteWebsocket(PongFrame, partialPayload)
-			return
 		case CloseFrame:
 			err = c.WriteWebsocket(CloseFrame, partialPayload)
 			c.Close()

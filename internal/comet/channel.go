@@ -48,8 +48,8 @@ func (c *Channel) ReadMessage(p *protocal.Proto) (err error) {
 		return
 	}
 	if op == websocket.PingFrame {
-		p = &protocal.Proto{Op: protocal.OpHeartBeat}
-		return nil
+		p.Op = protocal.OpHeartBeat
+		return
 	}
 	p.Unpack(payload)
 	return

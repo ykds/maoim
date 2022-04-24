@@ -114,7 +114,6 @@ type AckReq struct {
 }
 
 func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
-	var lastHB = time.Now()
 	for {
 		p := &protocal.Proto{}
 		err := ch.ReadMessage(p)
@@ -123,11 +122,8 @@ func (s *Server) ReadMessage(ch *Channel, hb chan<- struct{}) error {
 		}
 		if p.Op == protocal.OpHeartBeat {
 			fmt.Println("receiver heartbeat packet")
-			if now := time.Now(); now.Sub(lastHB) > HeartBeatInterval {
-				_ = ch.Push(comet.ProtoHeartBeatReply)
-				hb <- struct{}{}
-				lastHB = now
-			}
+			_ = ch.Push(comet.ProtoHeartBeatReply)
+			hb <- struct{}{}
 		} else if p.Op == protocal.OpAck {
 			ackReq := &AckReq{}
 			err = json.Unmarshal(p.Body, ackReq)
@@ -191,7 +187,6 @@ func (s *Server) heartbeat(ctx context.Context, hb <-chan struct{}, key string) 
 		select {
 		case <-hb:
 			fmt.Println("handle heartbeat")
-			t.Reset(HeartBeatInterval)
 			_, _ = s.userClient.Connect(context.Background(), &pb.ConnectReq{
 				UserId: key,
 			})

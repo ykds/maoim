@@ -32,7 +32,7 @@ func (p *Proto) Pack() []byte {
 
 func (p *Proto) PackHeartBeat() []byte {
 	buf := make([]byte, _headerSize)
-	binary.BigEndian.PutUint32(buf[:_opOffset], uint32(OpHeartBeat))
+	binary.BigEndian.PutUint16(buf[:_opOffset], uint16(OpHeartBeat))
 	return buf
 }
 
